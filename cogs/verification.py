@@ -193,6 +193,13 @@ class FinishVerificationButton(discord.ui.View):
                        custom_id="finish_verify")
     async def finish_verification(self, button: discord.ui.Button, interaction: discord.Interaction):
         try:
+            # Respond
+            await interaction.respond("Yayyy~! 🎉 You're officially part of our community now! 💕 ˚₊· ͟͟͞͞➳❥\n"
+                                      "- Come say hi in <#general>! 🌟\n"
+                                      "- Customize your roles in <#roles>! 🎀\n"
+                                      "- Drop fun suggestions in <#suggestions>! 💡\n"
+                                      "We're so happy to have you here~! 🫶 (｡♥‿♥｡) ⋆｡˚˛♡")
+
             existing_data = get_data(f"verification/{interaction.user.id}")
             if 'channel' not in existing_data:
                 await interaction.response.send_message("You haven't started the verification process yet!",
@@ -223,13 +230,6 @@ class FinishVerificationButton(discord.ui.View):
             # Assign the "Verified" role
             verified_role = interaction.guild.get_role(int(ROLE_VERIFIED))
             await interaction.user.add_roles(verified_role)
-
-            # Respond
-            await interaction.respond("Yayyy~! 🎉 You're officially part of our community now! 💕 ˚₊· ͟͟͞͞➳❥\n"
-                                      "- Come say hi in <#general>! 🌟\n"
-                                      "- Customize your roles in <#roles>! 🎀\n"
-                                      "- Drop fun suggestions in <#suggestions>! 💡\n"
-                                      "We're so happy to have you here~! 🫶 (｡♥‿♥｡) ⋆｡˚˛♡")
 
             # Add the channel to the deletion queue (10 minutes)
 
