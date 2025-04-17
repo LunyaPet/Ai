@@ -1,10 +1,12 @@
 import asyncio
+import os
 
 import discord
 
 from cogs.verification import StartVerificationButton
 from util.storage import get_data, set_data
 
+GUILD = os.getenv("GUILD")
 
 class DevCommands(discord.Cog):
     def __init__(self, bot: discord.Bot):
@@ -19,7 +21,7 @@ class DevCommands(discord.Cog):
         if "mode" in status_data and "status" in status_data:
             await self.bot.change_presence(activity=discord.Activity(type=discord.ActivityType[status_data["mode"]], status=status_data["status"]))
 
-    dev_group = discord.SlashCommandGroup(name="dev", description="Developer commands", guild_ids=[1362400131206348930],
+    dev_group = discord.SlashCommandGroup(name="dev", description="Developer commands", guild_ids=[int(GUILD)],
         default_member_permissions=discord.Permissions(administrator=True), )
 
     @dev_group.command(name="debug")
