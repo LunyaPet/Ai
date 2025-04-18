@@ -116,10 +116,10 @@ class Verification(discord.Cog):
                         existing_data['notifications'].remove(i)
 
                 if len(existing_data['notifications']) == 0:
-                    await message.reply("Oki doki! You're not subscribed to any notifs yet. (´• ω •`) ⋆｡˚˛♡")
+                    await message.reply("Oki doki! You're not subscribed to any notifs yet. (´• ω •`) ⋆｡˚˛♡\nIf you want to continue, just type `next`~")
                 else:
                     await message.reply(
-                        f"So far so good~ You're getting: {', '.join(existing_data['notifications'])}! 🧸⋆｡˚˛♡")
+                        f"So far so good~ You're getting: {', '.join(existing_data['notifications'])}! 🧸⋆｡˚˛♡\nIf you want to continue, just type `next`~")
 
                 set_data(f"verification/{message.author.id}", existing_data)
         except Exception as e:
@@ -134,7 +134,6 @@ class StartVerificationButton(discord.ui.View):
     async def start_verification(self, button: discord.ui.Button, interaction: discord.Interaction):
         try:
             # Verified member check
-
             if any([i.id == int(ROLE_VERIFIED) for i in interaction.user.roles]):
                 await interaction.respond("You're already verified!", ephemeral=True)
                 return
