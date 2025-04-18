@@ -39,7 +39,7 @@ class UserCommands(discord.Cog):
             uname = subprocess.run(["uname", "-a"], capture_output=True, text=True)
             uptime = subprocess.run(["uptime"], capture_output=True, text=True)
 
-            await ctx.respond("-# " + uname + "\n-# " + uptime)
+            await ctx.respond("-# " + uname.stdout + "\n-# " + uptime.stdout)
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occurred while executing the command.", ephemeral=True)
