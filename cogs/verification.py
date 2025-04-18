@@ -14,6 +14,10 @@ ROLE_VERIFIED = os.getenv("ROLES_VERIFIED")
 if ROLE_VERIFIED is None:
     print("WARNING: The ROLES_VERIFIED environment variable is not set. Verifying will not work properly. Please set it to the ID of the Verified role.")
 
+CHANNEL_GENERAL = os.getenv("CHANNEL_GENERAL")
+CHANNEL_ROLES = os.getenv("CHANNEL_ROLES")
+CHANNEL_SUGGESTIONS = os.getenv("CHANNEL_SUGGESTIONS")
+
 
 class Verification(discord.Cog):
     def __init__(self, bot: discord.Bot):
@@ -195,9 +199,9 @@ class FinishVerificationButton(discord.ui.View):
         try:
             # Respond
             await interaction.respond("Yayyy~! 🎉 You're officially part of our community now! 💕 ˚₊· ͟͟͞͞➳❥\n"
-                                      "- Come say hi in <#general>! 🌟\n"
-                                      "- Customize your roles in <#roles>! 🎀\n"
-                                      "- Drop fun suggestions in <#suggestions>! 💡\n"
+                                      f"- Come say hi in <#{CHANNEL_GENERAL}>! 🌟\n"
+                                      f"- Customize your roles in <#{CHANNEL_ROLES}>! 🎀\n"
+                                      f"- Drop fun suggestions in <#{CHANNEL_SUGGESTIONS}>! 💡\n"
                                       "We're so happy to have you here~! 🫶 (｡♥‿♥｡) ⋆｡˚˛♡")
 
             existing_data = get_data(f"verification/{interaction.user.id}")
