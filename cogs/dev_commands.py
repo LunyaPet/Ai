@@ -6,9 +6,7 @@ import sentry_sdk
 
 from cogs.verification import StartVerificationButton
 from util.storage import get_data, set_data
-
-GUILD = os.getenv("GUILD")
-OWNER = os.getenv("OWNER")
+from constants import OWNER, GUILD
 
 class DevCommands(discord.Cog):
     def __init__(self, bot: discord.Bot):

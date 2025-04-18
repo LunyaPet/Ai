@@ -9,14 +9,7 @@ from discord.ext import tasks
 from util.notifications import notifications_to_roles
 from util.pronouns import validate_pronouns, get_sets_for_pronouns, get_roles_for_pronouns
 from util.storage import set_data, get_data
-
-ROLE_VERIFIED = os.getenv("ROLES_VERIFIED")
-if ROLE_VERIFIED is None:
-    print("WARNING: The ROLES_VERIFIED environment variable is not set. Verifying will not work properly. Please set it to the ID of the Verified role.")
-
-CHANNEL_GENERAL = os.getenv("CHANNEL_GENERAL")
-CHANNEL_ROLES = os.getenv("CHANNEL_ROLES")
-CHANNEL_SUGGESTIONS = os.getenv("CHANNEL_SUGGESTIONS")
+from constants import ROLE_VERIFIED, CHANNEL_GENERAL, CHANNEL_ROLES, CHANNEL_SUGGESTIONS, VERIFICATION_GROUP_ID
 
 
 class Verification(discord.Cog):
@@ -152,7 +145,7 @@ class StartVerificationButton(discord.ui.View):
                     ephemeral=True)
                 return
 
-            group_id = os.getenv("VERIFICATION_GROUP_ID")
+            group_id = VERIFICATION_GROUP_ID
             group = interaction.guild.get_channel(int(group_id))
 
             if group is None:

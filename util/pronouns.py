@@ -9,12 +9,6 @@ def validate_pronouns(pronouns: str):
     """
     return len(get_sets_for_pronouns(pronouns)) > 0
 
-ROLE_HE = os.getenv("ROLES_HE")
-ROLE_SHE = os.getenv("ROLES_SHE")
-ROLE_THEY = os.getenv("ROLES_THEY")
-ROLE_ONE = os.getenv("ROLES_ONE")
-ROLE_IT = os.getenv("ROLES_IT")
-ROLE_NAME = os.getenv("ROLES_NAME")
 
 def get_roles_for_pronouns(pronouns: str) -> list[str]:
     """

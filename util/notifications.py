@@ -1,10 +1,5 @@
 import os
-
-ROLE_VIDEOS = os.getenv("ROLE_NOTIF_VIDEOS")
-ROLE_STREAMS = os.getenv("ROLE_NOTIF_STREAMS")
-ROLE_TIKTOK = os.getenv("ROLE_NOTIF_TIKTOK")
-ROLE_FEDI = os.getenv("ROLE_NOTIF_FEDI")
-ROLE_SERVER = os.getenv("ROLE_NOTIF_SERVER")
+from constants import ROLE_VIDEOS, ROLE_STREAMS, ROLE_TIKTOK, ROLE_FEDI, ROLE_SERVER
 
 def notifications_to_roles(notifications: list[str]) -> list[str]:
     result = []

@@ -1,0 +1,54 @@
+import os
+
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+
+GUILD = os.getenv("GUILD")
+OWNER = os.getenv("OWNER")
+
+ROLE_HE = os.getenv("ROLES_HE")
+ROLE_SHE = os.getenv("ROLES_SHE")
+ROLE_THEY = os.getenv("ROLES_THEY")
+ROLE_ONE = os.getenv("ROLES_ONE")
+ROLE_IT = os.getenv("ROLES_IT")
+ROLE_NAME = os.getenv("ROLES_NAME")
+
+ROLE_VIDEOS = os.getenv("ROLE_NOTIF_VIDEOS")
+ROLE_STREAMS = os.getenv("ROLE_NOTIF_STREAMS")
+ROLE_TIKTOK = os.getenv("ROLE_NOTIF_TIKTOK")
+ROLE_FEDI = os.getenv("ROLE_NOTIF_FEDI")
+ROLE_SERVER = os.getenv("ROLE_NOTIF_SERVER")
+
+ROLE_VERIFIED = os.getenv("ROLES_VERIFIED")
+
+CHANNEL_GENERAL = os.getenv("CHANNEL_GENERAL")
+CHANNEL_ROLES = os.getenv("CHANNEL_ROLES")
+CHANNEL_SUGGESTIONS = os.getenv("CHANNEL_SUGGESTIONS")
+
+VERIFICATION_GROUP_ID = os.getenv("VERIFICATION_GROUP_ID")
+
+def validate_values(l: dict[str, str | None]):
+    for k, v in l.items():
+        if v is None:
+            print("WARNING: " + k + " is not set, please check!")
+
+validate_values({
+    'DISCORD_TOKEN': DISCORD_TOKEN,
+    'GUILD': GUILD,
+    'OWNER': OWNER,
+    'ROLE_HE': ROLE_HE,
+    'ROLE_SHE': ROLE_SHE,
+    'ROLE_THEY': ROLE_THEY,
+    'ROLE_ONE': ROLE_ONE,
+    'ROLE_IT': ROLE_IT,
+    'ROLE_NAME': ROLE_NAME,
+    'ROLE_VIDEOS': ROLE_VIDEOS,
+    'ROLE_STREAMS': ROLE_STREAMS,
+    'ROLE_TIKTOK': ROLE_TIKTOK,
+    'ROLE_FEDI': ROLE_FEDI,
+    'ROLE_SERVER': ROLE_SERVER,
+    'ROLE_VERIFIED': ROLE_VERIFIED,
+    'CHANNEL_GENERAL': CHANNEL_GENERAL,
+    'CHANNEL_ROLES': CHANNEL_ROLES,
+    'CHANNEL_SUGGESTIONS': CHANNEL_SUGGESTIONS,
+    'VERIFICATION_GROUP_ID': VERIFICATION_GROUP_ID
+})
