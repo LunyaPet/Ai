@@ -10,7 +10,7 @@ def validate_pronouns(pronouns: str):
     return len(get_sets_for_pronouns(pronouns)) > 0
 
 
-def get_roles_for_pronouns(pronouns: str) -> list[str]:
+def get_roles_for_pronouns(pronouns: str) -> str:
     """
     Parse a pronoun string and return a list of role constants using pronoun sets.
 
@@ -25,7 +25,6 @@ def get_roles_for_pronouns(pronouns: str) -> list[str]:
         "name": ROLE_NAME
     }
 
-    roles: list[str] = []
     sets = get_sets_for_pronouns(pronouns)
     for s in sets:
         if s in set_to_role:

@@ -6,6 +6,7 @@ import sentry_sdk
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 
+from cogs.auto_fedi_notifs import AutoFediNotifications
 from cogs.dev_commands import DevCommands
 from cogs.test_user import UserCommands
 from cogs.verification import Verification
@@ -26,5 +27,6 @@ async def on_ready():
 bot.add_cog(DevCommands(bot))
 bot.add_cog(Verification(bot))
 bot.add_cog(UserCommands(bot))
+bot.add_cog(AutoFediNotifications(bot))
 
 bot.run(DISCORD_TOKEN)
