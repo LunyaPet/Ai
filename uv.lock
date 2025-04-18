@@ -17,10 +17,14 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "sentry-sdk" },
+    { name = "yt-dlp" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "sentry-sdk", specifier = "==2.26.1" }]
+requires-dist = [
+    { name = "sentry-sdk", specifier = "==2.26.1" },
+    { name = "yt-dlp", specifier = "==2025.4.6.232826.dev0" },
+]
 
 [[package]]
 name = "sentry-sdk"
@@ -42,4 +46,13 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/8a/78/16493d9c386d8e60e442a35feac5e00f0913c0f4b7c217c11e8ec2ff53e0/urllib3-2.4.0.tar.gz", hash = "sha256:414bc6535b787febd7567804cc015fee39daab8ad86268f1310a9250697de466", size = 390672 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6b/11/cc635220681e93a0183390e26485430ca2c7b5f9d33b15c74c2861cb8091/urllib3-2.4.0-py3-none-any.whl", hash = "sha256:4e16665048960a0900c702d4a66415956a584919c03361cac9f1df5c5dd7e813", size = 128680 },
+]
+
+[[package]]
+name = "yt-dlp"
+version = "2025.4.6.232826.dev0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/15/64/c71ac8e247d5b500fc8ccb5b6a58681d464cf13b1945780fb2810313bcc7/yt_dlp-2025.4.6.232826.dev0.tar.gz", hash = "sha256:796f16125632b6a3c26d21044c88b5fa92873e73e9793c7c438b7981af078446", size = 2972140 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/29/c1/4c49ada78021fb749d71f0f441470c78d90e99d96471ec68bbfd3122db56/yt_dlp-2025.4.6.232826.dev0-py3-none-any.whl", hash = "sha256:2512d9d864784ca2f019f149a027c4a7cafc55ac40bebe3d4a1c51191d14498e", size = 3231810 },
 ]

@@ -33,6 +33,8 @@ VERIFICATION_GROUP_ID = os.getenv("VERIFICATION_GROUP_ID")
 FEDI_INSTANCE = os.getenv("FEDI_INSTANCE")
 FEDI_USER_ID = os.getenv("FEDI_USER_ID")
 
+YT_LINK = os.getenv("YT_LINK")
+
 def validate_values(l: dict[str, str | None]):
     for k, v in l.items():
         if v is None:
@@ -61,5 +63,6 @@ validate_values({
     'CHANNEL_NEW_VIDEOS': CHANNEL_NEW_VIDEOS,
     'CHANNEL_NEW_FEDI': CHANNEL_NEW_FEDI,
     'VERIFICATION_GROUP_ID': VERIFICATION_GROUP_ID,
-    'FEDI_INSTANCE': FEDI_INSTANCE
+    'FEDI_INSTANCE': FEDI_INSTANCE,
+    'YT_LINK': YT_LINK
 })
