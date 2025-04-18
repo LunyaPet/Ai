@@ -1,3 +1,5 @@
+import random
+
 import discord
 import sentry_sdk
 import subprocess
@@ -11,7 +13,8 @@ class MeowComponent(discord.ui.View):
 
     @discord.ui.button(label="Meow", style=discord.ButtonStyle.primary)
     async def meow(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await interaction.response.send_message("Meow~! :3", ephemeral=True)
+        meows = ["Mraow~", "meow :3", "mwmrwmrma~ :3 ", "mwrmwmrwma :3", "mwrmwma :3", "meow", "mmrwwa uwu :3"]
+        await interaction.response.send_message(random.choice(meows))
 
 class UserCommands(discord.Cog):
     def __init__(self, bot: discord.Bot):
