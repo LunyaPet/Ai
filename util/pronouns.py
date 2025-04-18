@@ -28,10 +28,10 @@ def get_roles_for_pronouns(pronouns: str) -> list[str]:
     roles: list[str] = []
     sets = get_sets_for_pronouns(pronouns)
     for s in sets:
-        if s in set_to_role and set_to_role[s] not in roles:
-            roles.append(set_to_role[s])
+        if s in set_to_role:
+            return set_to_role[s]
 
-    return roles if roles else [ROLE_NAME]
+    return ROLE_NAME
 
 def get_sets_for_pronouns(pronouns: str) -> list[str]:
     """
