@@ -2,14 +2,14 @@ import aiohttp
 import discord
 from discord.ext import tasks
 
-from constants import CHANNEL_NEW_FEDI, ROLE_FEDI, FEDI_INSTANCE
+from constants import CHANNEL_NEW_FEDI, ROLE_FEDI, FEDI_INSTANCE, FEDI_USER_ID
 from util.storage import get_data, set_data
 
 
 async def get_latest_posts():
     async with aiohttp.ClientSession() as session:
         async with await session.post(f"https://{FEDI_INSTANCE}/api/users/notes",
-                                      json={"limit": 10, "userId": "a0cj5mqxoz2e0001"}) as resp:
+                                      json={"limit": 10, "userId": FEDI_USER_ID}) as resp:
             js = await resp.json()
 
             return [i["id"] for i in js]
@@ -57,7 +57,7 @@ class AutoFediNotifications(discord.Cog):
                 continue
 
             await channel.send(
-                f"<@{ROLE_FEDI}> mldchan posted a new note on fedi~! Go check it out~ https://{FEDI_INSTANCE}/notes/{i}")
+                f"<@&{ROLE_FEDI}> mldchan posted a new note on fedi~! Go check it out~ https://{FEDI_INSTANCE}/notes/{i}")
             existing_data["posted_posts"].append(i)
 
         set_data("fedi_notifications", existing_data)

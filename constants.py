@@ -31,6 +31,7 @@ CHANNEL_NEW_FEDI = os.getenv("CHANNEL_NEW_FEDI")
 VERIFICATION_GROUP_ID = os.getenv("VERIFICATION_GROUP_ID")
 
 FEDI_INSTANCE = os.getenv("FEDI_INSTANCE")
+FEDI_USER_ID = os.getenv("FEDI_USER_ID")
 
 def validate_values(l: dict[str, str | None]):
     for k, v in l.items():
