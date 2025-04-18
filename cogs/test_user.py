@@ -35,8 +35,8 @@ class UserCommands(discord.Cog):
                 await ctx.respond("You are not authorized to use this command!", ephemeral=True)
                 return
 
-            uname = subprocess.run("uname -a", capture_output=True, text=True)
-            uptime = subprocess.run("uptime", capture_output=True, text=True)
+            uname = subprocess.run(["uname", "-a"], capture_output=True, text=True)
+            uptime = subprocess.run(["uptime"], capture_output=True, text=True)
 
             await ctx.respond(uname + "\n" + uptime)
         except Exception as e:
