@@ -70,7 +70,7 @@ class UserCommands(discord.Cog):
                 return
 
             uname = subprocess.run(["uname", "-a"], capture_output=True, text=True)
-            uptime = subprocess.run(["uptime -p"], capture_output=True, text=True)
+            uptime = subprocess.run(["uptime", "-p"], capture_output=True, text=True)
 
             await ctx.respond(uname.stdout.strip() + "\n" + uptime.stdout.strip(), ephemeral=not public)
         except Exception as e:
