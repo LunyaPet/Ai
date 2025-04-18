@@ -1,5 +1,6 @@
 import discord
 import sentry_sdk
+import subprocess
 
 from constants import OWNER
 
