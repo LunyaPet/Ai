@@ -1,5 +1,6 @@
 import random
 import subprocess
+import time
 
 import aiohttp
 import discord
@@ -159,6 +160,37 @@ async def lookup_by_str(lookup_str: str) -> list[discord.Embed] | None:
     return await lookup_note_id(lookup_str)
 
 
+async def search(query: str) -> tuple[list[discord.Embed], int] | None:
+    start_time = time.time()
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"https://{FEDI_INSTANCE}/api/notes/search", json={
+            "query": query,
+            "limit": 10
+        }) as resp:
+            if resp.status != 200:
+                return None
+
+            resp_body = await resp.json()
+
+            embeds = []
+
+            for i in resp_body:
+                emb = await lookup_note_id(i["id"])
+
+                if emb is None:
+                    continue
+
+                embeds.extend(emb)
+
+                if len(embeds) >= 3:
+                    break
+
+            end_time = time.time()
+            diff = round((end_time - start_time) * 1000)
+            return (embeds, diff) if len(embeds) > 0 else None
+
+
+
 class UserCommands(discord.Cog):
     def __init__(self, bot: discord.Bot):
         self.bot = bot
@@ -222,3 +254,20 @@ class UserCommands(discord.Cog):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("Error when looking up!", ephemeral=True)
+
+    @fedi_group.command(name="search", description="Search on fedi")
+    async def search(self, ctx: discord.ApplicationContext, q: str):
+        try:
+            await ctx.defer()
+
+            # Let's attempt to generate embed based on search function
+            emb = await search(q)
+
+            if emb is None:
+                await ctx.followup.send("Error! No result")
+                return
+
+            await ctx.followup.send(embeds=emb[0], content=f"Searched 3,089,841+ notes within {emb[1]} ms")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await ctx.followup.send(f"Error! Server error: {e=}")
