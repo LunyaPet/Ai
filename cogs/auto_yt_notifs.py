@@ -60,7 +60,7 @@ class AutoYouTubeNotifications(discord.Cog):
 
         self.check_latest_videos.start()
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(minutes=5)
     async def check_latest_videos(self):
 
         try:
@@ -77,7 +77,7 @@ class AutoYouTubeNotifications(discord.Cog):
                 emb = discord.Embed(
                     title=i["title"],
                     description=i["description"],
-                    color=discord.Color.green(),
+                    color=discord.Color.red(),
                     url=f"https://youtube.com/watch?v={i['id']}",
                     image=i["thumbnail"],
                     fields=[
