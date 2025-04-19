@@ -4,7 +4,7 @@ import yt_dlp
 
 ydl = yt_dlp.YoutubeDL()
 
-info = ydl.extract_info("https://youtube.com/@mldchan/videos", download=False, process=False)
+info = ydl.extract_info("https://tiktok.com/@grl.uwu", download=False, process=False)
 
 i = 0
 
