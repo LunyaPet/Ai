@@ -10,7 +10,7 @@ from cogs.auto_fedi_notifs import AutoFediNotifications
 from cogs.auto_tiktok_notifs import AutoTikTokNotifications
 from cogs.auto_yt_notifs import AutoYouTubeNotifications
 from cogs.dev_commands import DevCommands
-from cogs.test_user import UserCommands
+from cogs.user_commands import UserCommands
 from cogs.verification import Verification
 from constants import DISCORD_TOKEN, SENTRY_DSN
 
