@@ -7,7 +7,7 @@ import discord
 import sentry_sdk
 from discord import Interaction
 
-from constants import OWNER, FEDI_INSTANCE
+from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION
 
 
 class MeowComponent(discord.ui.View):
@@ -271,3 +271,33 @@ class UserCommands(discord.Cog):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.followup.send(f"Error! Server error: {e=}")
+
+    @discord.slash_command(name='ban_from_mldchan', description='Ban user from mldchan\'s Discord server')
+    async def ban_from_mldchan(self, ctx: discord.ApplicationContext, user: discord.User, reason: str):
+        try:
+            # Get guild
+
+            guild = self.bot.get_guild(int(GUILD))
+
+            # Ban user
+
+            await guild.ban(user, reason=reason, delete_message_seconds=7 * 24 * 3600)
+
+            # Log message
+
+            logs_channel = guild.get_channel(int(CHANNEL_MODERATION))
+
+            await logs_channel.send(embed=discord.Embed(
+                title="Member Banned Externally",
+                description=f"The member {user.mention} was banned here because mldchan issued a ban command from the {ctx.guild.name} Discord server.",
+                fields=[
+                    discord.EmbedField(name="Banned Member", value=user.mention, inline=True),
+                    discord.EmbedField(name="Reason", value=reason, inline=True),
+                    discord.EmbedField(name="From Server", value=ctx.guild.name, inline=True)
+                ]
+            ))
+
+            await ctx.respond("Member was banned successfully!", ephemeral=True)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await ctx.respond("An error occured reporting this user.", ephemeral=True)
