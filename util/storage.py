@@ -66,5 +66,9 @@ def delete_data(path: str):
         if not os.path.exists(s):
             os.mkdir(s)
 
+    # Check if file exists
+    if not os.path.exists(f"{path}.json"):
+        return
+
     # Delete file
     os.unlink(f"{path}.json")

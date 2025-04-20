@@ -1,4 +1,4 @@
-import asyncio
+import os
 import os
 import time
 
@@ -6,10 +6,12 @@ import discord
 import sentry_sdk
 from discord.ext import tasks
 
+from constants import ROLE_VERIFIED, CHANNEL_GENERAL, CHANNEL_ROLES, CHANNEL_SUGGESTIONS, VERIFICATION_GROUP_ID, \
+    CHANNEL_MODERATION, ROLE_MOD
 from util.notifications import notifications_to_roles
 from util.pronouns import validate_pronouns, get_sets_for_pronouns, get_roles_for_pronouns
+from util.quarantine import is_member_in_quarantine
 from util.storage import set_data, get_data, delete_data
-from constants import ROLE_VERIFIED, CHANNEL_GENERAL, CHANNEL_ROLES, CHANNEL_SUGGESTIONS, VERIFICATION_GROUP_ID
 
 
 class Verification(discord.Cog):
@@ -28,6 +30,7 @@ class Verification(discord.Cog):
 
         self.bot.add_view(StartVerificationButton())
         self.bot.add_view(FinishVerificationButton())
+        self.bot.add_view(HandleQuarantineButton())
 
         self.delete_verification_channels.start()
 
@@ -43,6 +46,7 @@ class Verification(discord.Cog):
                     channel = self.bot.get_channel(channel_delete_queue['queue'][i]['channel_id'])
                     if channel is not None:
                         await channel.delete()
+                        delete_data(f"quarantine_state/{channel.id}")
         except Exception as e:
             sentry_sdk.capture_exception(e)
 
@@ -93,13 +97,34 @@ class Verification(discord.Cog):
                 if message.content.lower() == 'next':
                     await message.reply(
                         f"Kyaa~! You’re signed up for {', '.join(existing_data['notifications'])}! 🐱‍👤 ⋆｡˚˛♡")
-                    await message.channel.send("All set with your notifs, thank youuu! 💖\n\n"
-                                               "One last thing, cutie~ Please read our rules to keep our space safe and cozy! ˚₊· ͟͟͞͞➳❥\n"
-                                               "Here's the tl;dr: Be kind, be respectful, and keep it sweet. No meanies allowed! 😤\n\n"
-                                               "If you agree, click the green button below to finish up~ 🍵✨",
-                                               view=FinishVerificationButton())
-                    existing_data['state'] = 'rules'
-                    set_data(f"verification/{message.author.id}", existing_data)
+
+                    if is_member_in_quarantine(message.author.id):
+                        message_1 = await message.channel.send("Oops! You were quarantined!\n"
+                                                   "Please write a simple about you in here and please wait until an admin manually verifies you."
+                                                   "We are sorry for the inconvinence, but we want to keep our members safe.",
+                                                   view=HandleQuarantineButton())
+
+                        existing_data['state'] = 'quarantine'
+                        set_data(f"verification/{message.author.id}", existing_data)
+                        set_data(f"quarantine_state/{message_1.channel.id}", {
+                            'member_id': message.author.id
+                        })
+
+                        log_channel = message.guild.get_channel(int(CHANNEL_MODERATION))
+                        if log_channel is None:
+                            return
+
+                        await log_channel.send(embed=discord.Embed(title="Action Required",
+                            description=f"A member in {message.channel.mention} was quarantined! Please check their introduction once they write one!",
+                            color=discord.Color.red()))
+                    else:
+                        await message.channel.send("All set with your notifs, thank youuu! 💖\n\n"
+                                                   "One last thing, cutie~ Please read our rules to keep our space safe and cozy! ˚₊· ͟͟͞͞➳❥\n"
+                                                   "Here's the tl;dr: Be kind, be respectful, and keep it sweet. No meanies allowed! 😤\n\n"
+                                                   "If you agree, click the green button below to finish up~ 🍵✨",
+                                                   view=FinishVerificationButton())
+                        existing_data['state'] = 'rules'
+                        set_data(f"verification/{message.author.id}", existing_data)
                     return
 
                 for i in ['videos', 'streams', 'tiktok', 'fedi', 'server']:
@@ -109,7 +134,8 @@ class Verification(discord.Cog):
                         existing_data['notifications'].remove(i)
 
                 if len(existing_data['notifications']) == 0:
-                    await message.reply("Oki doki! You're not subscribed to any notifs yet. (´• ω •`) ⋆｡˚˛♡\nIf you want to continue, just type `next`~")
+                    await message.reply(
+                        "Oki doki! You're not subscribed to any notifs yet. (´• ω •`) ⋆｡˚˛♡\nIf you want to continue, just type `next`~")
                 else:
                     await message.reply(
                         f"So far so good~ You're getting: {', '.join(existing_data['notifications'])}! 🧸⋆｡˚˛♡\nIf you want to continue, just type `next`~")
@@ -158,7 +184,7 @@ class StartVerificationButton(discord.ui.View):
                     return
 
                 await interaction.respond(
-                    f"You have already begun the verification process! Please check {existing_channel[0].mention}!",
+                    f"You have already begun the verification process! Please check {existing_channel.mention}!",
                     ephemeral=True)
                 return
 
@@ -220,8 +246,7 @@ class FinishVerificationButton(discord.ui.View):
                 return
 
             if existing_data["state"] != "rules":
-                await interaction.response.send_message("You are already verified!",
-                                                        ephemeral=True)
+                await interaction.response.send_message("You are already verified!", ephemeral=True)
                 return
 
             # Assign pronoun roles
@@ -250,11 +275,93 @@ class FinishVerificationButton(discord.ui.View):
             if not 'queue' in channel_delete_queue:
                 channel_delete_queue['queue'] = []
 
-            channel_delete_queue['queue'].append({'channel_id': existing_data['channel'], 'time': int(time.time()) + 600})
+            channel_delete_queue['queue'].append(
+                {'channel_id': existing_data['channel'], 'time': int(time.time()) + 600})
 
             set_data("verification/channel_delete_queue", channel_delete_queue)
 
             existing_data['state'] = 'finished'
             set_data(f"verification/{interaction.user.id}", existing_data)
         except Exception as e:
+            sentry_sdk.capture_exception(e)
+
+
+class HandleQuarantineButton(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Unquarantine User", style=discord.ButtonStyle.success, custom_id="unquarantine")
+    async def unquarantine_user(self, button: discord.ui.Button, interaction: discord.Interaction):
+        try:
+            # Get state
+            quarantine_data = get_data(f"quarantine_state/{interaction.channel_id}")
+            if quarantine_data == {}:
+                await interaction.respond("Not found", ephemeral=True)
+                return
+
+            # Mod check
+            if int(ROLE_MOD) not in [i.id for i in interaction.user.roles]:
+                await interaction.respond("Insufficient permissions", ephemeral=True)
+                return
+
+                # Load data
+            existing_data = get_data(f"verification/{quarantine_data['member_id']}")
+
+            # Check verification state
+            if existing_data['state'] != 'quarantine':
+                await interaction.respond('Invalid state!', ephemeral=True)
+                return
+
+            # Set state
+            existing_data['state'] = 'finished'
+            set_data(f"verification/{quarantine_data['member_id']}", existing_data)
+
+            # Send message
+            await interaction.channel.send(f"<@{quarantine_data['member_id']}>\n\n"
+                                           f"Your quarantine request was approved, thank youuu! 💖\n\n"
+                                           "One last thing, cutie~ Please read our rules to keep our space safe and cozy! ˚₊· ͟͟͞͞➳❥\n"
+                                           "Here's the tl;dr: Be kind, be respectful, and keep it sweet. No meanies allowed! 😤\n\n"
+                                           "If you agree, click the green button below to finish up~ 🍵✨",
+                                           view=FinishVerificationButton())
+
+            # Respond to admin
+            await interaction.respond("Unquarantined the user succesfull!", ephemeral=True)
+            self.stop()
+        except Exception as e:
+            await interaction.respond("Something went wrong!", ephemeral=True)
+            sentry_sdk.capture_exception(e)
+
+    @discord.ui.button(label="Ban User...", style=discord.ButtonStyle.danger, custom_id="ban_user")
+    async def ban_user(self, button: discord.ui.Button, interaction: discord.Interaction):
+        try:
+            # Get state
+            quarantine_data = get_data(f"quarantine_state/{interaction.channel_id}")
+            if quarantine_data == {}:
+                await interaction.respond("Not found", ephemeral=True)
+                return
+
+            # Mod check
+            if int(ROLE_MOD) not in [i.id for i in interaction.user.roles]:
+                await interaction.respond("Insufficient permissions", ephemeral=True)
+                return
+
+                # Load data
+            existing_data = get_data(f"verification/{quarantine_data['member_id']}")
+
+            # Check verification state
+            if existing_data['state'] != 'quarantine':
+                await interaction.respond('Invalid state!', ephemeral=True)
+                return
+
+                # Delete data
+            delete_data(f"verification/{quarantine_data['member_id']}")
+
+            # Respond to admin
+            await interaction.respond(f"User was banned!", ephemeral=True)
+
+            # Ban user
+            user = interaction.guild.get_member(quarantine_data['member_id'])
+            await user.ban(delete_message_seconds=7 * 24 * 3600, reason="Quarantine")
+        except Exception as e:
+            await interaction.respond("Something went wrong!", ephemeral=True)
             sentry_sdk.capture_exception(e)

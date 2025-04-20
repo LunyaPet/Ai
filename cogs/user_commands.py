@@ -8,6 +8,7 @@ import sentry_sdk
 from discord import Interaction
 
 from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION
+from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
 
 
 class MeowComponent(discord.ui.View):
@@ -282,7 +283,7 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.followup.send(f"Error! Server error: {e=}")
 
-    @discord.slash_command(name='ban_from_mldchan', description='Ban user from mldchan\'s Discord server')
+    @discord.slash_command(name='ban_from_mldchan', description='Ban user from mldchan\'s Discord server', integration_types=[discord.IntegrationType.user_install])
     async def ban_from_mldchan(self, ctx: discord.ApplicationContext, user: discord.User, reason: str):
         try:
             # Verify right user
@@ -313,6 +314,42 @@ class UserCommands(discord.Cog):
             ))
 
             await ctx.respond("Member was banned successfully!", ephemeral=True)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await ctx.respond("An error occured reporting this user.", ephemeral=True)
+
+    @discord.slash_command(name='add_to_quarantine', description='Add user to quarantine of mldchan', integration_types=[discord.IntegrationType.user_install])
+    async def add_to_quarantine(self, ctx: discord.ApplicationContext, user: discord.User):
+        try:
+            # Verify right user
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+                return
+
+            if is_member_in_quarantine(user.id):
+                await ctx.respond("This user is already quarantined!", ephemeral=True)
+                return
+
+            add_member_to_quarantine(user.id)
+            await ctx.respond("Member was added to quarantine successfully!", ephemeral=True)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await ctx.respond("An error occured reporting this user.", ephemeral=True)
+
+    @discord.slash_command(name='remove_from_quarantine', description='Add user to quarantine of mldchan', integration_types=[discord.IntegrationType.user_install])
+    async def remove_from_quarantine(self, ctx: discord.ApplicationContext, user: discord.User):
+        try:
+            # Verify right user
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+                return
+
+            if not is_member_in_quarantine(user.id):
+                await ctx.respond("This user is not quarantined!", ephemeral=True)
+                return
+
+            delete_member_from_quarantine(user.id)
+            await ctx.respond("Member was removed from quarantine successfully!", ephemeral=True)
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occured reporting this user.", ephemeral=True)
