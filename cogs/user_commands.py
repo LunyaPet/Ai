@@ -243,6 +243,11 @@ class UserCommands(discord.Cog):
     @fedi_group.command(name="lookup", description="Lookup fedi user/post")
     async def lookup_post(self, ctx: discord.ApplicationContext, lookup_str: str):
         try:
+            # Verify right user
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+                return
+
             # Let's attempt generate embed based on lookup function
             emb = await lookup_by_str(lookup_str)
 
@@ -258,6 +263,11 @@ class UserCommands(discord.Cog):
     @fedi_group.command(name="search", description="Search on fedi")
     async def search(self, ctx: discord.ApplicationContext, q: str):
         try:
+            # Verify right user
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+                return
+
             await ctx.defer()
 
             # Let's attempt to generate embed based on search function
@@ -275,6 +285,11 @@ class UserCommands(discord.Cog):
     @discord.slash_command(name='ban_from_mldchan', description='Ban user from mldchan\'s Discord server')
     async def ban_from_mldchan(self, ctx: discord.ApplicationContext, user: discord.User, reason: str):
         try:
+            # Verify right user
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+                return
+
             # Get guild
 
             guild = self.bot.get_guild(int(GUILD))
