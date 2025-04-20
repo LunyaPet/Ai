@@ -3,7 +3,7 @@ import sentry_sdk
 import yt_dlp
 from discord.ext import tasks
 
-from constants import CHANNEL_NEW_VIDEOS, ROLE_VIDEOS, TT_LINK, ROLE_TIKTOK
+from constants import TT_LINK, ROLE_TIKTOK, CHANNEL_NEW_TIKTOK
 from util.storage import get_data, set_data
 
 
@@ -70,7 +70,7 @@ class AutoTikTokNotifications(discord.Cog):
 
             posts = await get_all_latest_post_info()
 
-            channel = self.bot.get_channel(int(CHANNEL_NEW_VIDEOS))
+            channel = self.bot.get_channel(int(CHANNEL_NEW_TIKTOK))
 
             for i in posts:
                 if i["id"] in existing_data["posted_ids"]:
