@@ -8,7 +8,7 @@ from discord.ext import tasks
 
 from util.notifications import notifications_to_roles
 from util.pronouns import validate_pronouns, get_sets_for_pronouns, get_roles_for_pronouns
-from util.storage import set_data, get_data
+from util.storage import set_data, get_data, delete_data
 from constants import ROLE_VERIFIED, CHANNEL_GENERAL, CHANNEL_ROLES, CHANNEL_SUGGESTIONS, VERIFICATION_GROUP_ID
 
 
@@ -115,6 +115,23 @@ class Verification(discord.Cog):
                         f"So far so good~ You're getting: {', '.join(existing_data['notifications'])}! 🧸⋆｡˚˛♡\nIf you want to continue, just type `next`~")
 
                 set_data(f"verification/{message.author.id}", existing_data)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+
+    @discord.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        try:
+            # Existing channel check
+            existing_data = get_data(f"verification/{member.id}")
+            if existing_data != {}:
+                delete_data(f"verification/{member.id}")
+
+            # Delete channel if exist
+            existing_channel = member.guild.get_channel(existing_data['channel'])
+            if existing_channel is None:
+                return
+
+            await existing_channel.delete()
         except Exception as e:
             sentry_sdk.capture_exception(e)
 
