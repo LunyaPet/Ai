@@ -309,7 +309,7 @@ class UserCommands(discord.Cog):
 
             await logs_channel.send(embed=discord.Embed(
                 title="Member Banned Externally",
-                description=f"The member {user.mention} was banned here because mldchan issued a ban command from the {ctx.guild.name} Discord server.",
+                description=f"The member {user.mention} was banned here because mldchan issued a ban command from a different server.",
                 fields=[
                     discord.EmbedField(name="Banned Member", value=user.mention, inline=True),
                     discord.EmbedField(name="Reason", value=reason, inline=True)
