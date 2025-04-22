@@ -18,7 +18,7 @@ class MeowComponent(discord.ui.View):
     @discord.ui.button(label="Meow", style=discord.ButtonStyle.primary)
     async def meow(self, button: discord.ui.Button, interaction: discord.Interaction):
         meows = ["Mraow~", "meow :3", "mwmrwmrma~ :3 ", "mwrmwmrwma :3", "mwrmwma :3", "meow", "mmrwwa uwu :3"]
-        await interaction.response.send_message(random.choice(meows))
+        await interaction.respond(random.choice(meows), ephemeral=True)
 
 class SillyModal(discord.ui.Modal):
     def __init__(self, title: str, label: str, placeholder: str):
@@ -308,15 +308,14 @@ class UserCommands(discord.Cog):
                 description=f"The member {user.mention} was banned here because mldchan issued a ban command from the {ctx.guild.name} Discord server.",
                 fields=[
                     discord.EmbedField(name="Banned Member", value=user.mention, inline=True),
-                    discord.EmbedField(name="Reason", value=reason, inline=True),
-                    discord.EmbedField(name="From Server", value=ctx.guild.name, inline=True)
+                    discord.EmbedField(name="Reason", value=reason, inline=True)
                 ]
             ))
 
             await ctx.respond("Member was banned successfully!", ephemeral=True)
         except Exception as e:
             sentry_sdk.capture_exception(e)
-            await ctx.respond("An error occured reporting this user.", ephemeral=True)
+            await ctx.respond("An error occured banning this user.", ephemeral=True)
 
     @discord.slash_command(name='add_to_quarantine', description='Add user to quarantine of mldchan', integration_types=[discord.IntegrationType.user_install])
     async def add_to_quarantine(self, ctx: discord.ApplicationContext, user: discord.User):
@@ -334,7 +333,7 @@ class UserCommands(discord.Cog):
             await ctx.respond("Member was added to quarantine successfully!", ephemeral=True)
         except Exception as e:
             sentry_sdk.capture_exception(e)
-            await ctx.respond("An error occured reporting this user.", ephemeral=True)
+            await ctx.respond("An error occured quarantining this user.", ephemeral=True)
 
     @discord.slash_command(name='remove_from_quarantine', description='Add user to quarantine of mldchan', integration_types=[discord.IntegrationType.user_install])
     async def remove_from_quarantine(self, ctx: discord.ApplicationContext, user: discord.User):
@@ -352,4 +351,4 @@ class UserCommands(discord.Cog):
             await ctx.respond("Member was removed from quarantine successfully!", ephemeral=True)
         except Exception as e:
             sentry_sdk.capture_exception(e)
-            await ctx.respond("An error occured reporting this user.", ephemeral=True)
+            await ctx.respond("An error occured quarantining this user.", ephemeral=True)
