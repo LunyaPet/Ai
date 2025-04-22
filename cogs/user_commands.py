@@ -13,9 +13,9 @@ from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, d
 
 class MeowComponent(discord.ui.View):
     def __init__(self):
-        super().__init__()
+        super().__init__(timeout=None)
 
-    @discord.ui.button(label="Meow", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Meow", style=discord.ButtonStyle.primary, custom_id="uc_meow")
     async def meow(self, button: discord.ui.Button, interaction: discord.Interaction):
         meows = ["Mraow~", "meow :3", "mwmrwmrma~ :3 ", "mwrmwmrwma :3", "mwrmwma :3", "meow", "mmrwwa uwu :3"]
         await interaction.respond(random.choice(meows), ephemeral=True)
@@ -195,6 +195,10 @@ async def search(query: str) -> tuple[list[discord.Embed], int] | None:
 class UserCommands(discord.Cog):
     def __init__(self, bot: discord.Bot):
         self.bot = bot
+
+    @discord.Cog.listener()
+    async def on_ready(self):
+        self.bot.add_view(MeowComponent())
 
     @discord.command(name='ping', description='Tests connection to Discord', integration_types=[discord.IntegrationType.user_install])
     async def ping(self, ctx: discord.ApplicationContext):
