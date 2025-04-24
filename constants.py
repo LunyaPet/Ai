@@ -1,5 +1,7 @@
 import os
 
+import sentry_sdk
+
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 SENTRY_DSN = os.getenv("SENTRY_DSN")
 
@@ -24,6 +26,7 @@ ROLE_VERIFIED = os.getenv("ROLES_VERIFIED")
 ROLE_MOD = os.getenv("ROLES_MOD")
 
 CHANNEL_GENERAL = os.getenv("CHANNEL_GENERAL")
+CHANNEL_MEDIA = os.getenv("CHANNEL_MEDIA")
 CHANNEL_ROLES = os.getenv("CHANNEL_ROLES")
 CHANNEL_SUGGESTIONS = os.getenv("CHANNEL_SUGGESTIONS")
 
@@ -44,7 +47,7 @@ TT_LINK = os.getenv("TT_LINK")
 def validate_values(l: dict[str, str | None]):
     for k, v in l.items():
         if v is None:
-            print("WARNING: " + k + " is not set, please check!")
+            sentry_sdk.capture_message(f"CONSTANTS: The constant value for {k} is NOT set!")
 
 validate_values({
     'DISCORD_TOKEN': DISCORD_TOKEN,
@@ -65,6 +68,7 @@ validate_values({
     'ROLE_VERIFIED': ROLE_VERIFIED,
     'ROLE_MOD': ROLE_MOD,
     'CHANNEL_GENERAL': CHANNEL_GENERAL,
+    'CHANNEL_MEDIA': CHANNEL_MEDIA,
     'CHANNEL_ROLES': CHANNEL_ROLES,
     'CHANNEL_SUGGESTIONS': CHANNEL_SUGGESTIONS,
     'CHANNEL_NEW_VIDEOS': CHANNEL_NEW_VIDEOS,
