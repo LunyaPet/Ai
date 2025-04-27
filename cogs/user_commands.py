@@ -199,12 +199,15 @@ class UserCommands(discord.Cog):
     @discord.Cog.listener()
     async def on_ready(self):
         self.bot.add_view(MeowComponent())
+        self.bot.add_view(ComplimentsView(self.bot))
 
-    @discord.command(name='ping', description='Tests connection to Discord', integration_types=[discord.IntegrationType.user_install])
+    user_commands = discord.SlashCommandGroup(name='user', description='User commands', integration_types=[discord.IntegrationType.user_install])
+
+    @user_commands.command(name='ping', description='Tests connection to Discord', integration_types=[discord.IntegrationType.user_install])
     async def ping(self, ctx: discord.ApplicationContext):
         await ctx.respond(f'Pong! {self.bot.latency * 1500} ms', ephemeral=(ctx.user.id != int(OWNER)))
 
-    @discord.command(name='message', description='Send message as bot', integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name='message', description='Send message as bot', integration_types=[discord.IntegrationType.user_install])
     async def message(self, ctx: discord.ApplicationContext, msg: str):
         if ctx.user.id != int(OWNER):
             await ctx.respond("You are not authorized to use this command!", ephemeral=True)
@@ -212,7 +215,7 @@ class UserCommands(discord.Cog):
 
         await ctx.respond(msg)
 
-    @discord.command(name="information", description="Print information about the server", integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name="information", description="Print information about the server", integration_types=[discord.IntegrationType.user_install])
     async def information(self, ctx: discord.ApplicationContext, public: bool = False):
         try:
             if ctx.user.id != int(OWNER):
@@ -227,7 +230,7 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occurred while executing the command.", ephemeral=True)
 
-    @discord.command(name="meow", description="meow", integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name="meow", description="meow", integration_types=[discord.IntegrationType.user_install])
     async def meow(self, ctx: discord.ApplicationContext):
         if ctx.user.id != int(OWNER):
             await ctx.respond("You are not authorized to use this command!", ephemeral=True)
@@ -235,7 +238,7 @@ class UserCommands(discord.Cog):
 
         await ctx.respond(f"meow\n-# Clicking the meow button will cause the bot to meow at you. The bot is very much normal, same as its Ai, <@{OWNER}>.", view=MeowComponent())
 
-    @discord.command(name="silly", description="silly", integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name="silly", description="silly", integration_types=[discord.IntegrationType.user_install])
     async def silly(self, ctx: discord.ApplicationContext, text: str, title: str, label: str, placeholder: str = ""):
         if ctx.user.id != int(OWNER):
             await ctx.respond("You are not authorized to use this command!", ephemeral=True)
@@ -243,7 +246,7 @@ class UserCommands(discord.Cog):
 
         await ctx.respond(text, view=SillyComponent(title, label, placeholder))
 
-    fedi_group = discord.SlashCommandGroup(name="fedi", description="Fedi commands", integration_types=[discord.IntegrationType.user_install])
+    fedi_group = discord.SlashCommandGroup(name="fedi", description="Fedi commands", integration_types=[discord.IntegrationType.user_install], parent=user_commands)
 
     @fedi_group.command(name="lookup", description="Lookup fedi user/post")
     async def lookup_post(self, ctx: discord.ApplicationContext, lookup_str: str):
@@ -287,7 +290,7 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.followup.send(f"Error! Server error: {e=}")
 
-    @discord.slash_command(name='ban_from_mldchan', description='Ban user from mldchan\'s Discord server', integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name='ban_from_mldchan', description='Ban user from mldchan\'s Discord server', integration_types=[discord.IntegrationType.user_install])
     async def ban_from_mldchan(self, ctx: discord.ApplicationContext, user: discord.User, reason: str):
         try:
             # Verify right user
@@ -321,7 +324,7 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occured banning this user.", ephemeral=True)
 
-    @discord.slash_command(name='add_to_quarantine', description='Add user to quarantine of mldchan', integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name='add_to_quarantine', description='Add user to quarantine of mldchan', integration_types=[discord.IntegrationType.user_install])
     async def add_to_quarantine(self, ctx: discord.ApplicationContext, user: discord.User):
         try:
             # Verify right user
@@ -339,7 +342,7 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occured quarantining this user.", ephemeral=True)
 
-    @discord.slash_command(name='remove_from_quarantine', description='Add user to quarantine of mldchan', integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name='remove_from_quarantine', description='Add user to quarantine of mldchan', integration_types=[discord.IntegrationType.user_install])
     async def remove_from_quarantine(self, ctx: discord.ApplicationContext, user: discord.User):
         try:
             # Verify right user
@@ -356,3 +359,68 @@ class UserCommands(discord.Cog):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occured quarantining this user.", ephemeral=True)
+
+    @user_commands.command(name='compliments', description='>//////<', integration_types=[discord.IntegrationType.user_install])
+    async def compliments(self, ctx: discord.ApplicationContext):
+        try:
+            # Verify right user
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+                return
+
+            await ctx.respond("Send a girl some compliments! :3", view=ComplimentsView(self.bot))
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await ctx.respond("Error!", ephemeral=True)
+
+class ComplimentsView(discord.ui.View):
+    def __init__(self, bot: discord.Bot):
+        super().__init__(timeout=None)
+        self.bot = bot
+
+    @discord.ui.button(label="cute!", style=discord.ButtonStyle.primary, custom_id="cute")
+    async def cute(self, button: discord.ui.Button, interaction: discord.Interaction):
+        try:
+            owner = self.bot.get_user(int(OWNER))
+            await owner.send(f"You have been called cute by {interaction.user.mention}!")
+
+            await interaction.respond("Sent!", ephemeral=True)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
+
+
+    @discord.ui.button(label="pretty!", style=discord.ButtonStyle.primary, custom_id="pretty")
+    async def pretty(self, button: discord.ui.Button, interaction: discord.Interaction):
+        try:
+            owner = self.bot.get_user(int(OWNER))
+            await owner.send(f"You have been called pretty by {interaction.user.mention}!")
+
+            await interaction.respond("Sent!", ephemeral=True)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
+
+
+    @discord.ui.button(label="gorgeous!", style=discord.ButtonStyle.primary, custom_id="gorgeous")
+    async def gorgeous(self, button: discord.ui.Button, interaction: discord.Interaction):
+        try:
+            owner = self.bot.get_user(int(OWNER))
+            await owner.send(f"You have been called gorgeous by {interaction.user.mention}!")
+
+            await interaction.respond("Sent!", ephemeral=True)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
+
+
+    @discord.ui.button(label="cool!", style=discord.ButtonStyle.primary, custom_id="cool")
+    async def cool(self, button: discord.ui.Button, interaction: discord.Interaction):
+        try:
+            owner = self.bot.get_user(int(OWNER))
+            await owner.send(f"You have been called cool by {interaction.user.mention}!")
+
+            await interaction.respond("Sent!", ephemeral=True)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
