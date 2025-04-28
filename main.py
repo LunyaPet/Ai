@@ -10,6 +10,7 @@ from cogs.auto_fedi_notifs import AutoFediNotifications
 from cogs.auto_tiktok_notifs import AutoTikTokNotifications
 from cogs.auto_yt_notifs import AutoYouTubeNotifications
 from cogs.dev_commands import DevCommands
+from cogs.funny_auto_response import FunnyAutoResponse
 from cogs.general_cleaner import GeneralCleaner
 from cogs.media_threads import MediaThreads
 from cogs.message_reporting import MessageReporting
@@ -38,5 +39,6 @@ bot.add_cog(AutoTikTokNotifications(bot))
 bot.add_cog(MessageReporting(bot))
 bot.add_cog(GeneralCleaner(bot))
 bot.add_cog(MediaThreads(bot))
+bot.add_cog(FunnyAutoResponse(bot))
 
 bot.run(DISCORD_TOKEN)
