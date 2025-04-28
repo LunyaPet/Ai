@@ -486,3 +486,25 @@ class ComplimentsView(discord.ui.View):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
+
+
+    @discord.ui.button(label="good girl!", style=discord.ButtonStyle.primary, custom_id="good_girl")
+    async def good_girl(self, button: discord.ui.Button, interaction: discord.Interaction):
+        try:
+            count_cache("good girl", str(interaction.user.id))
+
+            await interaction.respond("Sent!", ephemeral=True)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
+
+
+    @discord.ui.button(label=":3", style=discord.ButtonStyle.primary, custom_id="colon_three")
+    async def colon_three(self, button: discord.ui.Button, interaction: discord.Interaction):
+        try:
+            count_cache(":3", str(interaction.user.id))
+
+            await interaction.respond("Sent!", ephemeral=True)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
