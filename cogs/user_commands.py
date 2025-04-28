@@ -6,6 +6,7 @@ import aiohttp
 import discord
 import sentry_sdk
 from discord import Interaction
+from discord.ext import tasks
 
 from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION
 from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
@@ -191,6 +192,28 @@ async def search(query: str) -> tuple[list[discord.Embed], int] | None:
             return (embeds, diff) if len(embeds) > 0 else None
 
 
+compliments_cache = {}
+
+def count_cache(compl_type: str, user_id: str):
+    if compl_type not in compliments_cache:
+        compliments_cache[compl_type] = []
+
+    compliments_cache[compl_type].append(user_id)
+
+
+def get_cache_str():
+    compl_str = "You were called "
+    for (k, v) in compliments_cache.items():
+        compl_str += f"{len(v)}x {k} by "
+        for i in v:
+            compl_str += f"<@{i}>, "
+
+        compl_str = compl_str[:-2] + " "
+
+    return compl_str
+
+def clear_cache():
+    compliments_cache.clear()
 
 class UserCommands(discord.Cog):
     def __init__(self, bot: discord.Bot):
@@ -200,6 +223,7 @@ class UserCommands(discord.Cog):
     async def on_ready(self):
         self.bot.add_view(MeowComponent())
         self.bot.add_view(ComplimentsView(self.bot))
+        self.handle_queue.start()
 
     user_commands = discord.SlashCommandGroup(name='user', description='User commands', integration_types=[discord.IntegrationType.user_install])
 
@@ -373,6 +397,21 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("Error!", ephemeral=True)
 
+    @tasks.loop(seconds=5)
+    async def handle_queue(self):
+        try:
+            if len(compliments_cache) == 0:
+                return
+
+            message = get_cache_str()
+
+            owner = self.bot.get_user(int(OWNER))
+            await owner.send(message)
+
+            clear_cache()
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+
 class ComplimentsView(discord.ui.View):
     def __init__(self, bot: discord.Bot):
         super().__init__(timeout=None)
@@ -381,8 +420,7 @@ class ComplimentsView(discord.ui.View):
     @discord.ui.button(label="cute!", style=discord.ButtonStyle.primary, custom_id="cute")
     async def cute(self, button: discord.ui.Button, interaction: discord.Interaction):
         try:
-            owner = self.bot.get_user(int(OWNER))
-            await owner.send(f"You have been called cute by {interaction.user.mention}!")
+            count_cache("cute", str(interaction.user.id))
 
             await interaction.respond("Sent!", ephemeral=True)
         except Exception as e:
@@ -393,8 +431,7 @@ class ComplimentsView(discord.ui.View):
     @discord.ui.button(label="pretty!", style=discord.ButtonStyle.primary, custom_id="pretty")
     async def pretty(self, button: discord.ui.Button, interaction: discord.Interaction):
         try:
-            owner = self.bot.get_user(int(OWNER))
-            await owner.send(f"You have been called pretty by {interaction.user.mention}!")
+            count_cache("pretty", str(interaction.user.id))
 
             await interaction.respond("Sent!", ephemeral=True)
         except Exception as e:
@@ -405,8 +442,7 @@ class ComplimentsView(discord.ui.View):
     @discord.ui.button(label="gorgeous!", style=discord.ButtonStyle.primary, custom_id="gorgeous")
     async def gorgeous(self, button: discord.ui.Button, interaction: discord.Interaction):
         try:
-            owner = self.bot.get_user(int(OWNER))
-            await owner.send(f"You have been called gorgeous by {interaction.user.mention}!")
+            count_cache("gorgeous", str(interaction.user.id))
 
             await interaction.respond("Sent!", ephemeral=True)
         except Exception as e:
@@ -417,8 +453,7 @@ class ComplimentsView(discord.ui.View):
     @discord.ui.button(label="cool!", style=discord.ButtonStyle.primary, custom_id="cool")
     async def cool(self, button: discord.ui.Button, interaction: discord.Interaction):
         try:
-            owner = self.bot.get_user(int(OWNER))
-            await owner.send(f"You have been called cool by {interaction.user.mention}!")
+            count_cache("cool", str(interaction.user.id))
 
             await interaction.respond("Sent!", ephemeral=True)
         except Exception as e:
