@@ -8,7 +8,7 @@ import sentry_sdk
 from discord import Interaction
 from discord.ext import tasks
 
-from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION
+from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN
 from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
 
 
@@ -270,9 +270,9 @@ class UserCommands(discord.Cog):
 
         await ctx.respond(text, view=SillyComponent(title, label, placeholder))
 
-    fedi_group = discord.SlashCommandGroup(name="fedi", description="Fedi commands", integration_types=[discord.IntegrationType.user_install], parent=user_commands)
+    fedi_group = discord.SlashCommandGroup(name="fedi", description="Fedi commands", integration_types=[discord.IntegrationType.user_install])
 
-    @fedi_group.command(name="lookup", description="Lookup fedi user/post")
+    @fedi_group.command(name="lookup", description="Lookup fedi user/post", integration_types=[discord.IntegrationType.user_install])
     async def lookup_post(self, ctx: discord.ApplicationContext, lookup_str: str):
         try:
             # Verify right user
@@ -292,7 +292,7 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("Error when looking up!", ephemeral=True)
 
-    @fedi_group.command(name="search", description="Search on fedi")
+    @fedi_group.command(name="search", description="Search on fedi", integration_types=[discord.IntegrationType.user_install])
     async def search(self, ctx: discord.ApplicationContext, q: str):
         try:
             # Verify right user
@@ -313,6 +313,33 @@ class UserCommands(discord.Cog):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.followup.send(f"Error! Server error: {e=}")
+
+    @fedi_group.command(name="note", description="Create a note on fedi", integration_types=[discord.IntegrationType.user_install])
+    @discord.option(name="visibility", choices=["public", "home", "followers"])
+    async def note(self, ctx: discord.ApplicationContext, text: str, cw: str = "", visibility: str = "public", public_response: bool = False):
+        try:
+            # Try create a note
+            data = {'text': text, 'visibility': visibility}
+            if len(cw.strip()) > 0:
+                data['cw'] = cw.strip()
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(f"https://{FEDI_INSTANCE}/api/notes/create", json=data, headers={
+                    'Authorization': f'Bearer {FEDI_TOKEN}'
+                }) as resp:
+                    if resp.status != 200:
+                        await ctx.respond("Non-OK response from server!", ephemeral=True)
+                        text = await resp.text()
+
+                        sentry_sdk.capture_message(f"Non-OK response {resp.status} from server: {text}")
+                        return
+
+                    data = await resp.json()
+
+                    await ctx.respond(f"Note created! https://{FEDI_INSTANCE}/notes/{data['createdNote']['id']}", ephemeral=not public_response)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await ctx.respond("Failed to create note!", ephemeral=True)
 
     @user_commands.command(name='ban_from_mldchan', description='Ban user from mldchan\'s Discord server', integration_types=[discord.IntegrationType.user_install])
     async def ban_from_mldchan(self, ctx: discord.ApplicationContext, user: discord.User, reason: str):
