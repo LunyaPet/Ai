@@ -208,9 +208,9 @@ def get_cache_str():
         for i in v:
             compl_str += f"<@{i}>, "
 
-        compl_str = compl_str[:-2] + " "
+        compl_str = compl_str[:-2] + ", "
 
-    return compl_str
+    return compl_str[:-2]
 
 def clear_cache():
     compliments_cache.clear()
