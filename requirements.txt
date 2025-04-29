@@ -1,3 +1,4 @@
 sentry-sdk~=2.26.1
 py-cord~=2.6.1
 yt-dlp~=2025.4.6.232826.dev0
+python-dateutil~=2.9.0.post0

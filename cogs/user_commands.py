@@ -10,6 +10,7 @@ from discord.ext import tasks
 
 from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN
 from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
+from dateutil.parser import isoparse
 
 
 class MeowComponent(discord.ui.View):
@@ -128,10 +129,13 @@ async def lookup_note_id(note_id: str, pinned: bool = False) -> list[discord.Emb
 
             pinned_post = "Pinned note by " if pinned else ""
 
+            desc = resp_body["text"] if resp_body["cw"] is None else f'CW: {resp_body["cw"]}\n\n(Open post to view the text)'
+            desc += get_poll_str(resp_body['poll'] if 'poll' in resp_body else None)
+
             emb = discord.Embed(
                 title=f"{'Pinned ' if pinned else ''}Note by {resp_body['user']['name']} (@{resp_body['user']['username']}@{host})",
                 url=f"https://{FEDI_INSTANCE}/notes/{resp_body['id']}",
-                description=resp_body["text"] if resp_body["cw"] is None else f'CW: {resp_body["cw"]}',
+                description=desc,
                 image=image_url,
                 author=discord.EmbedAuthor(
                     name=f"{pinned_post}{resp_body['user']['name']} (@{resp_body['user']['username']}@{host})",
@@ -160,6 +164,29 @@ async def lookup_by_str(lookup_str: str) -> list[discord.Embed] | None:
     # Lookup note by MisskeyID
 
     return await lookup_note_id(lookup_str)
+
+def get_poll_str(poll: dict | None):
+    if poll is None:
+        return ""
+
+    message = "\n\n**[Poll]**\n"
+    counts = sum([i['votes'] for i in poll['choices']])
+
+    for i in poll['choices']:
+        if counts == 0:
+            message += f"**{i['text']}** - {i['votes']} votes\n"
+        else:
+            message += f"**{i['text']}** - {i['votes']} votes ({int(i['votes'] / counts * 100)}%)\n"
+
+    message += "\n"
+
+    if poll['multiple']:
+        message += "**Multiple Choices** - "
+
+    expires_at = isoparse(poll['expiresAt'])
+    message += f"**Expires at {expires_at.strftime('%Y/%m/%d %H:%M:%S %Z')}**\n"
+
+    return message.rstrip()
 
 
 async def search(query: str) -> tuple[list[discord.Embed], int] | None:
