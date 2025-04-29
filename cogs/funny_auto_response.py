@@ -35,7 +35,7 @@ def generate_meow():
 
 async def handle_meow(message: discord.Message):
     # count meows
-    count = len(re.findall(r"(m[raow]+|nya+)", message.content))
+    count = len(re.findall(r"(m[raeow]+|nya+)", message.content))
 
     if count == 0:
         return
