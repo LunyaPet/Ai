@@ -12,6 +12,7 @@ from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKE
 from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
 from dateutil.parser import isoparse
 
+meow_cache = []
 
 class MeowComponent(discord.ui.View):
     def __init__(self):
@@ -20,6 +21,7 @@ class MeowComponent(discord.ui.View):
     @discord.ui.button(label="Meow", style=discord.ButtonStyle.primary, custom_id="uc_meow")
     async def meow(self, button: discord.ui.Button, interaction: discord.Interaction):
         meows = ["Mraow~", "meow :3", "mwmrwmrma~ :3 ", "mwrmwmrwma :3", "mwrmwma :3", "meow", "mmrwwa uwu :3"]
+        meow_cache.append(interaction.user.id)
         await interaction.respond(random.choice(meows), ephemeral=True)
 
 class SillyModal(discord.ui.Modal):
@@ -454,15 +456,21 @@ class UserCommands(discord.Cog):
     @tasks.loop(seconds=5)
     async def handle_queue(self):
         try:
-            if len(compliments_cache) == 0:
+            if len(compliments_cache) == 0 and len(meow_cache) == 0:
                 return
 
-            message = get_cache_str()
+            message = get_cache_str() if len(compliments_cache) > 0 else ""
+
+            meows = ["Mraow~", "meow :3", "mwmrwmrma~ :3 ", "mwrmwmrwma :3", "mwrmwma :3", "meow", "mmrwwa uwu :3"]
+
+            for i in meow_cache:
+                message += f"{random.choice(meows)} :3 by <@{i}>\n"
 
             owner = self.bot.get_user(int(OWNER))
             await owner.send(message)
 
             clear_cache()
+            meow_cache.clear()
         except Exception as e:
             sentry_sdk.capture_exception(e)
 
