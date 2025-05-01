@@ -280,7 +280,7 @@ class UserCommands(discord.Cog):
             uptime = subprocess.run(["uptime"], capture_output=True, text=True)
             version = "Python %s on %s" % (sys.version, sys.platform)
 
-            await ctx.respond(uname.stdout.strip() + "\n" + uptime.stdout.strip() + "\n" + version, ephemeral=not public)
+            await ctx.respond("`" + uname.stdout.strip() + "`\n`" + uptime.stdout.strip() + "`\n`" + version + "`", ephemeral=not public)
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occurred while executing the command.", ephemeral=True)
