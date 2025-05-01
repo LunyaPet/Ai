@@ -1,5 +1,6 @@
 import random
 import subprocess
+import sys
 import time
 
 import aiohttp
@@ -277,8 +278,9 @@ class UserCommands(discord.Cog):
 
             uname = subprocess.run(["uname", "-a"], capture_output=True, text=True)
             uptime = subprocess.run(["uptime", "-p"], capture_output=True, text=True)
+            version = "Python %s on %s" % (sys.version, sys.platform)
 
-            await ctx.respond(uname.stdout.strip() + "\n" + uptime.stdout.strip(), ephemeral=not public)
+            await ctx.respond(uname.stdout.strip() + "\n" + uptime.stdout.strip() + "\n" + version, ephemeral=not public)
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occurred while executing the command.", ephemeral=True)
