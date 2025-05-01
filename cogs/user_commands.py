@@ -277,7 +277,7 @@ class UserCommands(discord.Cog):
                 return
 
             uname = subprocess.run(["uname", "-a"], capture_output=True, text=True)
-            uptime = subprocess.run(["uptime", "-p"], capture_output=True, text=True)
+            uptime = subprocess.run(["uptime"], capture_output=True, text=True)
             version = "Python %s on %s" % (sys.version, sys.platform)
 
             await ctx.respond(uname.stdout.strip() + "\n" + uptime.stdout.strip() + "\n" + version, ephemeral=not public)
