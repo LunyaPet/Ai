@@ -10,7 +10,7 @@ from constants import GUILD
 async def handle_colon_three(message: discord.Message):
     # count :3 in message
     count = 0
-    for i in re.finditer(r":(3+)", message.content):
+    for i in re.finditer(r":(3+)", message.content.lower()):
         count = count + len(i[1])
 
     if count == 0:
@@ -35,7 +35,7 @@ def generate_meow():
 
 async def handle_meow(message: discord.Message):
     # count meows
-    count = len(re.findall(r"(m[raeow]+|nya+)", message.content))
+    count = len(re.findall(r"(m[mraeow]{3,}|nya+)", message.content.lower()))
 
     if count == 0:
         return
