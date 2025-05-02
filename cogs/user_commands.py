@@ -14,6 +14,7 @@ from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, d
 from dateutil.parser import isoparse
 
 meow_cache = []
+colon_three_cache = []
 
 class MeowComponent(discord.ui.View):
     def __init__(self):
@@ -24,6 +25,15 @@ class MeowComponent(discord.ui.View):
         meows = ["Mraow~", "meow :3", "mwmrwmrma~ :3 ", "mwrmwmrwma :3", "mwrmwma :3", "meow", "mmrwwa uwu :3"]
         meow_cache.append(interaction.user.id)
         await interaction.respond(random.choice(meows), ephemeral=True)
+
+class ColonThreeComoonent(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label=":3", style=discord.ButtonStyle.primary, custom_id="uc_colon_three")
+    async def colon_three(self, button: discord.ui.Button, interaction: discord.Interaction):
+        colon_three_cache.append(interaction.user.id)
+        await interaction.respond(":" + "3" * random.randint(1, 5), ephemeral=True)
 
 class SillyModal(discord.ui.Modal):
     def __init__(self, title: str, label: str, placeholder: str):
@@ -252,6 +262,7 @@ class UserCommands(discord.Cog):
     @discord.Cog.listener()
     async def on_ready(self):
         self.bot.add_view(MeowComponent())
+        self.bot.add_view(ColonThreeComoonent())
         self.bot.add_view(ComplimentsView(self.bot))
         self.handle_queue.start()
 
@@ -291,7 +302,15 @@ class UserCommands(discord.Cog):
             await ctx.respond("You are not authorized to use this command!", ephemeral=True)
             return
 
-        await ctx.respond(f"meow\n-# Clicking the meow button will cause the bot to meow at you. The bot is very much normal, same as its Ai, <@{OWNER}>.", view=MeowComponent())
+        await ctx.respond("meow", view=MeowComponent())
+
+    @user_commands.command(name="colon_three", description=":3", integration_types=[discord.IntegrationType.user_install])
+    async def colon_three(self, ctx: discord.ApplicationContext):
+        if ctx.user.id != int(OWNER):
+            await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+            return
+
+        await ctx.respond(":3", view=ColonThreeComoonent())
 
     @user_commands.command(name="silly", description="silly", integration_types=[discord.IntegrationType.user_install])
     async def silly(self, ctx: discord.ApplicationContext, text: str, title: str, label: str, placeholder: str = ""):
@@ -458,7 +477,7 @@ class UserCommands(discord.Cog):
     @tasks.loop(seconds=5)
     async def handle_queue(self):
         try:
-            if len(compliments_cache) == 0 and len(meow_cache) == 0:
+            if len(compliments_cache) == 0 and len(meow_cache) == 0 and len(colon_three_cache) == 0:
                 return
 
             message = get_cache_str() if len(compliments_cache) > 0 else ""
@@ -468,11 +487,15 @@ class UserCommands(discord.Cog):
             for i in meow_cache:
                 message += f"{random.choice(meows)} :3 by <@{i}>\n"
 
+            for i in colon_three_cache:
+                message += ":" + "3" * random.randint(1, 5) + f" by <@{i}>\n"
+
             owner = self.bot.get_user(int(OWNER))
             await owner.send(message)
 
             clear_cache()
             meow_cache.clear()
+            colon_three_cache.clear()
         except Exception as e:
             sentry_sdk.capture_exception(e)
 
@@ -529,17 +552,6 @@ class ComplimentsView(discord.ui.View):
     async def good_girl(self, button: discord.ui.Button, interaction: discord.Interaction):
         try:
             count_cache("good girl", str(interaction.user.id))
-
-            await interaction.respond("Sent!", ephemeral=True)
-        except Exception as e:
-            sentry_sdk.capture_exception(e)
-            await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
-
-
-    @discord.ui.button(label=":3", style=discord.ButtonStyle.primary, custom_id="colon_three")
-    async def colon_three(self, button: discord.ui.Button, interaction: discord.Interaction):
-        try:
-            count_cache(":3", str(interaction.user.id))
 
             await interaction.respond("Sent!", ephemeral=True)
         except Exception as e:
