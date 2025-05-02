@@ -1,4 +1,7 @@
+import asyncio
+import os.path
 import random
+import shutil
 import subprocess
 import sys
 import time
@@ -9,7 +12,7 @@ import sentry_sdk
 from discord import Interaction
 from discord.ext import tasks
 
-from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN
+from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN, CHANNEL_MEMES
 from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
 from dateutil.parser import isoparse
 
@@ -473,6 +476,32 @@ class UserCommands(discord.Cog):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("Error!", ephemeral=True)
+
+    @discord.message_command(name='Borrow Meme', description='Repost the message inside of the memes channel of mldchan\'s Discord server', integration_types=[discord.IntegrationType.user_install])
+    async def borrow_meme(self, ctx: discord.ApplicationContext, message: discord.Message):
+        try:
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+
+            # Download all attachments
+            if not os.path.exists("temp"):
+                os.mkdir("temp")
+
+            for i in message.attachments:
+                with open("temp/" + i.filename, "wb") as f:
+                    await i.save(f)
+
+            # Send it
+            memes = self.bot.get_guild(int(GUILD)).get_channel(int(CHANNEL_MEMES))
+            await memes.send(content=message.content, files=[discord.File(f"temp/{i.filename}", i.filename) for i in message.attachments])
+
+            # Delete
+            shutil.rmtree("temp")
+
+            await ctx.respond("Meme reposted in mldchan server successfully!", ephemeral=True)
+        except Exception as e:
+            await ctx.respond("Error!", ephemeral=True)
+            sentry_sdk.capture_exception(e)
 
     @tasks.loop(seconds=5)
     async def handle_queue(self):
