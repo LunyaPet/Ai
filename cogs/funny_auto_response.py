@@ -1,3 +1,4 @@
+import asyncio
 import random
 import re
 
@@ -43,6 +44,16 @@ async def handle_meow(message: discord.Message):
     await message.channel.send(" ".join([generate_meow() for _ in range(count)]) + " :3")
 
 
+async def handle_owo(message: discord.Message):
+    # count OwOs and UwUs
+    count = len(re.findall(r"([ou>]w[<ou])", message.content.lower()))
+
+    if count == 0:
+        return
+
+    await message.channel.send(" ".join(random.choices(["OwO", "owo", "UwU", "uwu", ">w<"], k=count)) + " :3")
+
+
 class FunnyAutoResponse(discord.Cog):
     def __init__(self, bot: discord.Bot):
         self.bot = bot
@@ -56,10 +67,10 @@ class FunnyAutoResponse(discord.Cog):
             if message.guild.id != int(GUILD):
                 return
 
-            # :3
-            await handle_colon_three(message)
-
-            # meow
-            await handle_meow(message)
+            await asyncio.gather(
+                handle_meow(message),
+                handle_colon_three(message),
+                handle_owo(message)
+            )
         except Exception as e:
             sentry_sdk.capture_exception(e)
