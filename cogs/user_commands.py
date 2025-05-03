@@ -146,7 +146,9 @@ async def lookup_note_id(note_id: str, pinned: bool = False) -> list[discord.Emb
             pinned_post = "Pinned note by " if pinned else ""
 
             desc = resp_body["text"] if resp_body["cw"] is None else f'CW: {resp_body["cw"]}\n\n(Open post to view the text)'
-            desc += get_poll_str(resp_body['poll'] if 'poll' in resp_body else None)
+
+            if 'poll' in resp_body and resp_body['poll'] is not None:
+                desc += get_poll_str(resp_body['poll'])
 
             emb = discord.Embed(
                 title=f"{'Pinned ' if pinned else ''}Note by {resp_body['user']['name']} (@{resp_body['user']['username']}@{host})",
@@ -181,7 +183,7 @@ async def lookup_by_str(lookup_str: str) -> list[discord.Embed] | None:
 
     return await lookup_note_id(lookup_str)
 
-def get_poll_str(poll: dict | None):
+def get_poll_str(poll: dict | None) -> str:
     if poll is None:
         return ""
 
