@@ -31,6 +31,7 @@ class Verification(discord.Cog):
         self.bot.add_view(StartVerificationButton())
         self.bot.add_view(FinishVerificationButton())
         self.bot.add_view(HandleQuarantineButton())
+        self.bot.add_view(NotificationsView("0"))
 
         self.delete_verification_channels.start()
 
@@ -79,68 +80,8 @@ class Verification(discord.Cog):
 
                 await message.channel.send("# 2. ✨ Notifications ✨ ˚₊· ͟͟͞͞➳❥\n\n"
                                            "Now let's set up which notifs you wanna get, okay~? ˚₊· ͟͟͞͞➳❥💖\n"
-                                           "Use `+name` to *subscribe* or `-name` to *unsubscribe*. For example: `+videos` to get video updates! 🎥\n"
-                                           "You can mix and match! Like: `+videos +server +streams` all at once ✨｡˚\n"
-                                           "When you're ready, type `next` to continue~! ˚₊· ͟͟͞͞➳❥\n\n"
-                                           "## 💌 Available notifications: ⋆｡˚˛♡\n"
-                                           "- `videos`: New YouTube videos by mldchan! 📹\n"
-                                           "- `streams`: Live streams on YouTube! 🎤\n"
-                                           "- `tiktok`: Cute posts on TikTok! 🎶\n"
-                                           "- `fedi`: Fediverse posts from mldchan~ 🐾\n"
-                                           "- `server`: Updates for this server! 🏠")
-
-            elif existing_data['state'] == 'notifications':
-                if 'notifications' not in existing_data:
-                    existing_data['notifications'] = []
-                    set_data(f"verification/{message.author.id}", existing_data)
-
-                if message.content.lower() == 'next':
-                    await message.reply(
-                        f"Kyaa~! You’re signed up for {', '.join(existing_data['notifications'])}! 🐱‍👤 ⋆｡˚˛♡")
-
-                    if is_member_in_quarantine(message.author.id):
-                        message_1 = await message.channel.send("Oops! You were quarantined!\n"
-                                                   "Please write a simple about you in here and please wait until an admin manually verifies you."
-                                                   "We are sorry for the inconvinence, but we want to keep our members safe.",
-                                                   view=HandleQuarantineButton())
-
-                        existing_data['state'] = 'quarantine'
-                        set_data(f"verification/{message.author.id}", existing_data)
-                        set_data(f"quarantine_state/{message_1.channel.id}", {
-                            'member_id': message.author.id
-                        })
-
-                        log_channel = message.guild.get_channel(int(CHANNEL_MODERATION))
-                        if log_channel is None:
-                            return
-
-                        await log_channel.send(embed=discord.Embed(title="Action Required",
-                            description=f"A member in {message.channel.mention} was quarantined! Please check their introduction once they write one!",
-                            color=discord.Color.red()))
-                    else:
-                        await message.channel.send("All set with your notifs, thank youuu! 💖\n\n"
-                                                   "One last thing, cutie~ Please read our rules to keep our space safe and cozy! ˚₊· ͟͟͞͞➳❥\n"
-                                                   "Here's the tl;dr: Be kind, be respectful, and keep it sweet. No meanies allowed! 😤\n\n"
-                                                   "If you agree, click the green button below to finish up~ 🍵✨",
-                                                   view=FinishVerificationButton())
-                        existing_data['state'] = 'rules'
-                        set_data(f"verification/{message.author.id}", existing_data)
-                    return
-
-                for i in ['videos', 'streams', 'tiktok', 'fedi', 'server']:
-                    if f'+{i}' in message.content and i not in existing_data['notifications']:
-                        existing_data['notifications'].append(i)
-                    if f'-{i}' in message.content and i in existing_data['notifications']:
-                        existing_data['notifications'].remove(i)
-
-                if len(existing_data['notifications']) == 0:
-                    await message.reply(
-                        "Oki doki! You're not subscribed to any notifs yet. (´• ω •`) ⋆｡˚˛♡\nIf you want to continue, just type `next`~")
-                else:
-                    await message.reply(
-                        f"So far so good~ You're getting: {', '.join(existing_data['notifications'])}! 🧸⋆｡˚˛♡\nIf you want to continue, just type `next`~")
-
-                set_data(f"verification/{message.author.id}", existing_data)
+                                           "When you're ready, click the `Next` button to continue~! ˚₊· ͟͟͞͞➳❥\n\n",
+                                           view=NotificationsView(str(message.author.id)))
         except Exception as e:
             sentry_sdk.capture_exception(e)
 
@@ -221,6 +162,168 @@ class StartVerificationButton(discord.ui.View):
                 f"Please check {channel.mention} to begin your verification journey~! (*≧▽≦) ˚₊· ͟͟͞͞➳❥",
                 ephemeral=True)
         except Exception as e:
+            sentry_sdk.capture_exception(e)
+
+
+class NotificationsView(discord.ui.View):
+    def __init__(self, user_id: str):
+        super().__init__(timeout=None)
+
+        self.clear_items()
+        self.generate_buttons(user_id)
+
+    def generate_buttons(self, user_id: str):
+        try:
+            existing_data = get_data(f"verification/{user_id}")
+
+            if 'notifications' not in existing_data:
+                existing_data['notifications'] = []
+                set_data(f"verification/{user_id}", existing_data)
+
+            for (key, text) in [('videos', 'Videos'), ('streams', 'Streams'), ('tiktok', 'TikTok'),
+                                ('fedi', 'Notes on the Fediverse'), ('server', 'Discord Server Updates')]:
+                if key in existing_data['notifications']:
+                    button = discord.ui.Button(label=text, style=discord.ButtonStyle.green, custom_id='disable_notifs_' + key)
+                    button.callback = self.disable_notification
+                    self.add_item(button)
+                else:
+                    button = discord.ui.Button(label=text, style=discord.ButtonStyle.red, custom_id='enable_notifs_' + key)
+                    button.callback = self.enable_notification
+                    self.add_item(button)
+
+            enable_all_button = discord.ui.Button(label="Enable all notifications", style=discord.ButtonStyle.gray, custom_id='notifs_enable_all')
+            enable_all_button.callback = self.enable_all_notifications
+            self.add_item(enable_all_button)
+
+            disable_all_button = discord.ui.Button(label="Disable all notifications", style=discord.ButtonStyle.gray, custom_id='notifs_disable_all')
+            disable_all_button.callback = self.disable_all_notifications
+            self.add_item(disable_all_button)
+
+            next_button = discord.ui.Button(label='Next', style=discord.ButtonStyle.primary, custom_id='notifs_next')
+            next_button.callback = self.next_button
+            self.add_item(next_button)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+
+    async def disable_notification(self, interaction: discord.Interaction):
+        try:
+            existing_data = get_data(f"verification/{interaction.user.id}")
+
+            if existing_data['state'] != 'notifications':
+                await interaction.respond(f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ", ephemeral=True)
+                return
+
+            existing_data['notifications'].remove(interaction.custom_id[15:])
+
+            set_data(f'verification/{interaction.user.id}', existing_data)
+
+            self.clear_items()
+            self.generate_buttons(str(interaction.user.id))
+
+            await interaction.edit(view=self)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+
+    async def enable_notification(self, interaction: discord.Interaction):
+        try:
+            existing_data = get_data(f"verification/{interaction.user.id}")
+
+            if existing_data['state'] != 'notifications':
+                await interaction.respond(f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ", ephemeral=True)
+                return
+
+            existing_data['notifications'].append(interaction.custom_id[14:])
+
+            set_data(f'verification/{interaction.user.id}', existing_data)
+
+            self.clear_items()
+            self.generate_buttons(str(interaction.user.id))
+
+            await interaction.edit(view=self)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+
+    async def enable_all_notifications(self, interaction: discord.Interaction):
+        try:
+            existing_data = get_data(f"verification/{interaction.user.id}")
+
+            if existing_data['state'] != 'notifications':
+                await interaction.respond(f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ", ephemeral=True)
+                return
+
+            for i in ['videos', 'streams', 'tiktok', 'fedi', 'server']:
+                if i not in existing_data['notifications']:
+                    existing_data['notifications'].append(i)
+
+            set_data(f'verification/{interaction.user.id}', existing_data)
+
+            self.clear_items()
+            self.generate_buttons(str(interaction.user.id))
+
+            await interaction.edit(view=self)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+
+    async def disable_all_notifications(self, interaction: discord.Interaction):
+        try:
+            existing_data = get_data(f"verification/{interaction.user.id}")
+
+            if existing_data['state'] != 'notifications':
+                await interaction.respond(f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ", ephemeral=True)
+                return
+
+            for i in ['videos', 'streams', 'tiktok', 'fedi', 'server']:
+                if i in existing_data['notifications']:
+                    existing_data['notifications'].remove(i)
+
+            set_data(f'verification/{interaction.user.id}', existing_data)
+
+            self.clear_items()
+            self.generate_buttons(str(interaction.user.id))
+
+            await interaction.edit(view=self)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+
+    async def next_button(self, interaction: discord.Interaction):
+        try:
+            existing_data = get_data(f"verification/{interaction.user.id}")
+
+            if existing_data['state'] != 'notifications':
+                await interaction.respond(
+                    f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ",
+                    ephemeral=True)
+                return
+
+            if is_member_in_quarantine(interaction.user.id):
+                message_1 = await interaction.respond("Oops! You were quarantined!\n"
+                                                      "Please write a simple about you in here and please wait until an admin manually verifies you."
+                                                      "We are sorry for the inconvinence, but we want to keep our members safe.",
+                                                      view=HandleQuarantineButton())
+
+                existing_data['state'] = 'quarantine'
+                set_data(f"verification/{interaction.user.id}", existing_data)
+                set_data(f"quarantine_state/{message_1.channel.id}", {
+                    'member_id': interaction.user.id
+                })
+
+                log_channel = interaction.guild.get_channel(int(CHANNEL_MODERATION))
+                if log_channel is None:
+                    return
+
+                await log_channel.send(embed=discord.Embed(title="Action Required",
+                                                           description=f"A member in {interaction.channel.mention} was quarantined! Please check their introduction once they write one!",
+                                                           color=discord.Color.red()))
+            else:
+                await interaction.respond("All set with your notifs, thank youuu! 💖\n\n"
+                                          "One last thing, cutie~ Please read our rules to keep our space safe and cozy! ˚₊· ͟͟͞͞➳❥\n"
+                                          "Here's the tl;dr: Be kind, be respectful, and keep it sweet. No meanies allowed! 😤\n\n"
+                                          "If you agree, click the green button below to finish up~ 🍵✨",
+                                          view=FinishVerificationButton())
+                existing_data['state'] = 'rules'
+                set_data(f"verification/{interaction.user.id}", existing_data)
+        except Exception as e:
+            await interaction.respond("Something went wrong :(", ephemeral=True)
             sentry_sdk.capture_exception(e)
 
 
