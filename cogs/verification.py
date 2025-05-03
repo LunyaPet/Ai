@@ -199,6 +199,10 @@ class NotificationsView(discord.ui.View):
             disable_all_button.callback = self.disable_all_notifications
             self.add_item(disable_all_button)
 
+            recommended_button = discord.ui.Button(label="Select Recommended", style=discord.ButtonStyle.primary, custom_id='notifs_select_recommended')
+            recommended_button.callback = self.recommended_notifications
+            self.add_item(recommended_button)
+
             next_button = discord.ui.Button(label='Next', style=discord.ButtonStyle.primary, custom_id='notifs_next')
             next_button.callback = self.next_button
             self.add_item(next_button)
@@ -275,6 +279,25 @@ class NotificationsView(discord.ui.View):
             for i in ['videos', 'streams', 'tiktok', 'fedi', 'server']:
                 if i in existing_data['notifications']:
                     existing_data['notifications'].remove(i)
+
+            set_data(f'verification/{interaction.user.id}', existing_data)
+
+            self.clear_items()
+            self.generate_buttons(str(interaction.user.id))
+
+            await interaction.edit(view=self)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+
+    async def recommended_notifications(self, interaction: discord.Interaction):
+        try:
+            existing_data = get_data(f"verification/{interaction.user.id}")
+
+            if existing_data['state'] != 'notifications':
+                await interaction.respond(f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ", ephemeral=True)
+                return
+
+            existing_data['notifications'] = ['videos', 'streams', 'tiktok', 'server']
 
             set_data(f'verification/{interaction.user.id}', existing_data)
 
