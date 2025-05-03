@@ -123,7 +123,7 @@ async def lookup_note_id(note_id: str, pinned: bool = False) -> list[discord.Emb
 
             resp_body = await resp.json()
 
-            image_url = resp_body["files"][0]["url"] if len(resp_body["files"]) > 0 else None
+            image_url = resp_body["files"][0]["url"] if len(resp_body["files"]) > 0 and 'cw' not in resp_body else None
 
             reaction_string = ""
 
@@ -145,9 +145,17 @@ async def lookup_note_id(note_id: str, pinned: bool = False) -> list[discord.Emb
 
             pinned_post = "Pinned note by " if pinned else ""
 
-            desc = resp_body["text"] if resp_body["cw"] is None else f'CW: {resp_body["cw"]}\n\n(Open post to view the text)'
+            desc = resp_body["text"] if resp_body["cw"] is None else f'CW: {resp_body["cw"]}\n\n'
 
-            if 'poll' in resp_body and resp_body['poll'] is not None:
+            if resp_body['cw'] is not None:
+                if len(resp_body['files']) > 0 and len(resp_body['text']) > 0:
+                    desc += "(Open the link in order to view the text and media)"
+                elif len(resp_body['files']) > 0 and len(resp_body['text']) == 0:
+                    desc += "(Open the link in order to view the media)"
+                else:
+                    desc += "(Open the link in order to view the text)"
+
+            if 'poll' in resp_body and resp_body['poll'] is not None and resp_body['cw'] is None:
                 desc += get_poll_str(resp_body['poll'])
 
             emb = discord.Embed(
