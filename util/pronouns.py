@@ -1,5 +1,6 @@
 import os
-from constants import ROLE_HE, ROLE_SHE, ROLE_THEY, ROLE_ONE, ROLE_IT, ROLE_NAME
+from constants import ROLE_HE, ROLE_SHE, ROLE_THEY, ROLE_ONE, ROLE_IT, ROLE_NAME, ROLE_ANY, ROLE_ASK
+
 
 def validate_pronouns(pronouns: str):
     """
@@ -22,6 +23,8 @@ def get_roles_for_pronouns(pronouns: str) -> str:
         "they/them": ROLE_THEY,
         "one/ones": ROLE_ONE,
         "it/its": ROLE_IT,
+        'any/all': ROLE_ANY,
+        'ask': ROLE_ASK,
         "name": ROLE_NAME
     }
 
@@ -44,11 +47,19 @@ def get_sets_for_pronouns(pronouns: str) -> list[str]:
     - one -> ["one/ones"]
     - one/it -> ["one/ones", "it/its"]
     - one/one's -> ["one/ones"]
+    - any -> ["any/all"]
+    - ask -> ["ask"]
 
     """
     pron = pronouns.strip().lower()
     if pron == "name":
         return ["name"]
+
+    if "ask" in pron:
+        return ["ask"]
+
+    if "any" in pron or "all" in pron:
+        return ["any/all"]
 
     # Mapping from individual pronoun forms to a canonical set representation
     mapping = {

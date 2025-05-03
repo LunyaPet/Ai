@@ -13,6 +13,8 @@ ROLE_SHE = os.getenv("ROLES_SHE")
 ROLE_THEY = os.getenv("ROLES_THEY")
 ROLE_ONE = os.getenv("ROLES_ONE")
 ROLE_IT = os.getenv("ROLES_IT")
+ROLE_ANY = os.getenv("ROLES_ANY")
+ROLE_ASK = os.getenv("ROLES_ASK")
 ROLE_NAME = os.getenv("ROLES_NAME")
 
 ROLE_VIDEOS = os.getenv("ROLE_NOTIF_VIDEOS")
@@ -62,6 +64,8 @@ validate_values({
     'ROLE_THEY': ROLE_THEY,
     'ROLE_ONE': ROLE_ONE,
     'ROLE_IT': ROLE_IT,
+    'ROLE_ANY': ROLE_ANY,
+    'ROLE_ASK': ROLE_ASK,
     'ROLE_NAME': ROLE_NAME,
     'ROLE_VIDEOS': ROLE_VIDEOS,
     'ROLE_STREAMS': ROLE_STREAMS,
