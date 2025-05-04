@@ -89,7 +89,9 @@ class AutoYouTubeNotifications(discord.Cog):
                     url=f"https://youtube.com/watch?v={i['id']}",
                     image=i["thumbnail"],
                     fields=[
-                        discord.EmbedField(name="Views", value=i["view_count"])
+                        discord.EmbedField(name="Views", value=i["view_count"], inline=True),
+                        discord.EmbedField(name="Likes", value=i["like_count"], inline=True),
+                        discord.EmbedField(name="Comments", value=i["comment_count"], inline=True)
                     ]
                 )
 
@@ -110,7 +112,9 @@ class AutoYouTubeNotifications(discord.Cog):
                             url=f"https://youtube.com/watch?v={i['id']}",
                             image=i["thumbnail"],
                             fields=[
-                                discord.EmbedField(name="Views", value=i["view_count"])
+                                discord.EmbedField(name="Views", value=i["view_count"], inline=True),
+                                discord.EmbedField(name="Likes", value=i["like_count"], inline=True),
+                                discord.EmbedField(name="Comments", value=i["comment_count"], inline=True)
                             ]
                         )
 
