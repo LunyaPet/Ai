@@ -96,6 +96,28 @@ class AutoTikTokNotifications(discord.Cog):
                 existing_data["posted_ids"].append(i["id"])
                 existing_data["posted_data"].append(i)
 
+            async for msg in channel.history():
+                for i in posts:
+                    if i["id"] in msg.content:
+                        # Update the embed
+                        emb = discord.Embed(
+                            title="mldchan just posted a video!",
+                            description=f'{i["title"]}\n\n{i["description"]}',
+                            color=discord.Color.from_rgb(32, 170, 176) if existing_data[
+                                                                              "counter"] % 2 == 0 else discord.Color.from_rgb(
+                                236, 0, 70),
+                            url=i["url"],
+                            image=i["thumbnail"],
+                            fields=[
+                                discord.EmbedField(name="Views", value=i["view_count"], inline=True),
+                                discord.EmbedField(name="Likes", value=i["like_count"], inline=True),
+                                discord.EmbedField(name="Comments", value=i["comment_count"], inline=True)
+                            ]
+                        )
+
+                        print(f"Update TikTok post for ID {i['id']}", flush=True)
+                        await msg.edit(embed=emb)
+
             set_data("tt_notifications", existing_data)
         except Exception as e:
             sentry_sdk.capture_exception(e)
