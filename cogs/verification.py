@@ -6,8 +6,9 @@ import discord
 import sentry_sdk
 from discord.ext import tasks
 
+from cogs.tour import get_message, TourView
 from constants import ROLE_VERIFIED, CHANNEL_GENERAL, CHANNEL_ROLES, CHANNEL_SUGGESTIONS, VERIFICATION_GROUP_ID, \
-    CHANNEL_MODERATION, ROLE_MOD
+    CHANNEL_MODERATION, ROLE_MOD, CHANNEL_RULES
 from util.notifications import notifications_to_roles
 from util.pronouns import validate_pronouns, get_sets_for_pronouns, get_roles_for_pronouns
 from util.quarantine import is_member_in_quarantine
@@ -68,7 +69,8 @@ class Verification(discord.Cog):
             if existing_data['state'] == 'pronouns':
                 if not validate_pronouns(message.content):
                     await message.reply(
-                        "Eep! I don't understand those pronouns... Could you try again, please? (✿◕‿◕✿) ˚₊· ͟͟͞͞➳❥")
+                        "I don't understand those pronouns... Could you try again, please? (✿◕‿◕✿) ˚₊· ͟͟͞͞➳❥\n"
+                        "Make sure your pronuns are slash separated, e.g. `she/they` will give you `she/her` and `they/them`!")
                     return
 
                 pronouns = get_sets_for_pronouns(message.content)
@@ -79,7 +81,7 @@ class Verification(discord.Cog):
                 set_data(f"verification/{message.author.id}", existing_data)
 
                 await message.channel.send("# 2. ✨ Notifications ✨ ˚₊· ͟͟͞͞➳❥\n\n"
-                                           "Now let's set up which notifs you wanna get, okay~? ˚₊· ͟͟͞͞➳❥💖\n"
+                                           "Now pick which notifs you wanna get, okay~? ˚₊· ͟͟͞͞➳❥💖\n"
                                            "When you're ready, click the `Next` button to continue~! ˚₊· ͟͟͞͞➳❥\n\n",
                                            view=NotificationsView(str(message.author.id)))
         except Exception as e:
@@ -151,9 +153,8 @@ class StartVerificationButton(discord.ui.View):
                 "I'm Ai (愛), the maid of this lovely server~ Let's get you all comfy and verified! ˚₊· ͟͟͞͞➳❥\n"
                 "Just answer a few questions and we’ll be done in no time! 💕")
             pronouns_msg = await channel.send("# 1. 🌸 Pronouns 🌸 ⋆｡˚˛♡\n\n"
-                                              "Please tell me your pronouns so others can address you properly~! ˚₊· ͟͟͞͞➳❥\n\n"
-                                              "You can type something like `they/them`, a single word like `she`, or even `name` if you'd prefer people to use your name!\n\n"
-                                              "Supported pronouns: `he/him`, `she/her`, `they/them`, `one/ones`, `it/its`, `name`, `she/it`, `he/it` 🌈")
+                                              "Please tell me your pronouns so others can address you properly~! ˚₊· ͟͟͞͞➳❥\n"
+                                              "You can type something like `they/them`, a single word like `she`, or even `name` if you'd prefer people to use your name!🌈")
 
             set_data(f"verification/{interaction.user.id}",
                      {"state": "pronouns", "channel": channel.id, "pronouns_msg": pronouns_msg.id})
@@ -183,23 +184,28 @@ class NotificationsView(discord.ui.View):
             for (key, text) in [('videos', 'Videos'), ('streams', 'Streams'), ('tiktok', 'TikTok'),
                                 ('fedi', 'Notes on the Fediverse'), ('server', 'Discord Server Updates')]:
                 if key in existing_data['notifications']:
-                    button = discord.ui.Button(label=text, style=discord.ButtonStyle.green, custom_id='disable_notifs_' + key)
+                    button = discord.ui.Button(label=text, style=discord.ButtonStyle.green,
+                                               custom_id='disable_notifs_' + key)
                     button.callback = self.disable_notification
                     self.add_item(button)
                 else:
-                    button = discord.ui.Button(label=text, style=discord.ButtonStyle.red, custom_id='enable_notifs_' + key)
+                    button = discord.ui.Button(label=text, style=discord.ButtonStyle.red,
+                                               custom_id='enable_notifs_' + key)
                     button.callback = self.enable_notification
                     self.add_item(button)
 
-            enable_all_button = discord.ui.Button(label="Enable all notifications", style=discord.ButtonStyle.gray, custom_id='notifs_enable_all')
+            enable_all_button = discord.ui.Button(label="Enable all notifications", style=discord.ButtonStyle.gray,
+                                                  custom_id='notifs_enable_all')
             enable_all_button.callback = self.enable_all_notifications
             self.add_item(enable_all_button)
 
-            disable_all_button = discord.ui.Button(label="Disable all notifications", style=discord.ButtonStyle.gray, custom_id='notifs_disable_all')
+            disable_all_button = discord.ui.Button(label="Disable all notifications", style=discord.ButtonStyle.gray,
+                                                   custom_id='notifs_disable_all')
             disable_all_button.callback = self.disable_all_notifications
             self.add_item(disable_all_button)
 
-            recommended_button = discord.ui.Button(label="Select Recommended", style=discord.ButtonStyle.primary, custom_id='notifs_select_recommended')
+            recommended_button = discord.ui.Button(label="Select Recommended", style=discord.ButtonStyle.primary,
+                                                   custom_id='notifs_select_recommended')
             recommended_button.callback = self.recommended_notifications
             self.add_item(recommended_button)
 
@@ -214,7 +220,9 @@ class NotificationsView(discord.ui.View):
             existing_data = get_data(f"verification/{interaction.user.id}")
 
             if existing_data['state'] != 'notifications':
-                await interaction.respond(f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ", ephemeral=True)
+                await interaction.respond(
+                    f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ",
+                    ephemeral=True)
                 return
 
             existing_data['notifications'].remove(interaction.custom_id[15:])
@@ -233,7 +241,9 @@ class NotificationsView(discord.ui.View):
             existing_data = get_data(f"verification/{interaction.user.id}")
 
             if existing_data['state'] != 'notifications':
-                await interaction.respond(f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ", ephemeral=True)
+                await interaction.respond(
+                    f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ",
+                    ephemeral=True)
                 return
 
             existing_data['notifications'].append(interaction.custom_id[14:])
@@ -252,7 +262,9 @@ class NotificationsView(discord.ui.View):
             existing_data = get_data(f"verification/{interaction.user.id}")
 
             if existing_data['state'] != 'notifications':
-                await interaction.respond(f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ", ephemeral=True)
+                await interaction.respond(
+                    f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ",
+                    ephemeral=True)
                 return
 
             for i in ['videos', 'streams', 'tiktok', 'fedi', 'server']:
@@ -273,7 +285,9 @@ class NotificationsView(discord.ui.View):
             existing_data = get_data(f"verification/{interaction.user.id}")
 
             if existing_data['state'] != 'notifications':
-                await interaction.respond(f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ", ephemeral=True)
+                await interaction.respond(
+                    f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ",
+                    ephemeral=True)
                 return
 
             for i in ['videos', 'streams', 'tiktok', 'fedi', 'server']:
@@ -294,7 +308,9 @@ class NotificationsView(discord.ui.View):
             existing_data = get_data(f"verification/{interaction.user.id}")
 
             if existing_data['state'] != 'notifications':
-                await interaction.respond(f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ", ephemeral=True)
+                await interaction.respond(
+                    f"heehee, you can't change the notifications right now, pwease use the <#{CHANNEL_ROLES}> channel to do that, okay? >///< ",
+                    ephemeral=True)
                 return
 
             existing_data['notifications'] = ['videos', 'streams', 'tiktok', 'server']
@@ -338,10 +354,8 @@ class NotificationsView(discord.ui.View):
                                                            description=f"A member in {interaction.channel.mention} was quarantined! Please check their introduction once they write one!",
                                                            color=discord.Color.red()))
             else:
-                await interaction.respond("All set with your notifs, thank youuu! 💖\n\n"
-                                          "One last thing, cutie~ Please read our rules to keep our space safe and cozy! ˚₊· ͟͟͞͞➳❥\n"
-                                          "Here's the tl;dr: Be kind, be respectful, and keep it sweet. No meanies allowed! 😤\n\n"
-                                          "If you agree, click the green button below to finish up~ 🍵✨",
+                await interaction.respond("All set with your notifs, thank youuu! 💖\n"
+                                          f"Please take a look at the <#{CHANNEL_RULES}>, and agree to them and you're all set~! Thank you!",
                                           view=FinishVerificationButton())
                 existing_data['state'] = 'rules'
                 set_data(f"verification/{interaction.user.id}", existing_data)
@@ -358,22 +372,20 @@ class FinishVerificationButton(discord.ui.View):
                        custom_id="finish_verify")
     async def finish_verification(self, button: discord.ui.Button, interaction: discord.Interaction):
         try:
-            # Respond
-            await interaction.respond("Yayyy~! 🎉 You're officially part of our community now! 💕 ˚₊· ͟͟͞͞➳❥\n"
-                                      f"- Come say hi in <#{CHANNEL_GENERAL}>! 🌟\n"
-                                      f"- Customize your roles in <#{CHANNEL_ROLES}>! 🎀\n"
-                                      f"- Drop fun suggestions in <#{CHANNEL_SUGGESTIONS}>! 💡\n"
-                                      "We're so happy to have you here~! 🫶 (｡♥‿♥｡) ⋆｡˚˛♡")
-
             existing_data = get_data(f"verification/{interaction.user.id}")
             if 'channel' not in existing_data:
-                await interaction.response.send_message("You haven't started the verification process yet!",
+                await interaction.respond("You haven't started the verification process yet!",
                                                         ephemeral=True)
                 return
 
             if existing_data["state"] != "rules":
-                await interaction.response.send_message("You are already verified!", ephemeral=True)
+                await interaction.respond("You are already verified!", ephemeral=True)
                 return
+
+            # Respond
+            await interaction.respond("Yayyy~! 🎉 You're officially part of our community now! 💕 ˚₊· ͟͟͞͞➳❥\n"
+                                      "We're so happy to have you here~! 🫶 (｡♥‿♥｡) ⋆｡˚˛♡\n"
+                                      "Feel free to take the server tour now~ ❤️️", view=StartTourView())
 
             # Assign pronoun roles
             for role_id in [get_roles_for_pronouns(i) for i in existing_data['pronouns']]:
@@ -410,6 +422,27 @@ class FinishVerificationButton(discord.ui.View):
             set_data(f"verification/{interaction.user.id}", existing_data)
         except Exception as e:
             sentry_sdk.capture_exception(e)
+
+
+class StartTourView(discord.ui.View):
+    def __init__(self):
+        super().__init__()
+
+    @discord.ui.button(label="Start Server Tour", style=discord.ButtonStyle.primary)
+    async def start_tour(self, button: discord.ui.Button, interaction: discord.Interaction):
+        existing_data = get_data(f"verification/{interaction.user.id}")
+
+        if 'tour' in existing_data and existing_data['tour'] == True:
+            await interaction.respond("You already took the tour. You cannot take it again.", ephemeral=True)
+            return
+
+        existing_data['tour'] = True
+        set_data(f"verification/{interaction.user.id}", existing_data)
+
+        await interaction.guild.get_channel(int(CHANNEL_ROLES)).send(get_message("roles", interaction.user.mention), view=TourView("roles", str(interaction.user.id)))
+        await interaction.respond(
+            f"You should have received a ping in <#{CHANNEL_ROLES}>! Take a look in there, the bot will take you through a small tour of the server.",
+            ephemeral=True)
 
 
 class HandleQuarantineButton(discord.ui.View):
