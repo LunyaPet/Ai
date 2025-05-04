@@ -17,20 +17,12 @@ async def get_all_latest_post_info():
         i = 0
         output = []
         for j in info["entries"]:
-            if 'like_count' not in j:
-                j['like_count'] = 0
-            if 'comment_count' not in j:
-                j['comment_count'] = 0
-
-
             output.append({
                 "id": j["id"],
                 "title": j["title"],
                 "description": j["description"],
                 "thumbnail": j["thumbnails"][-1]["url"],
-                "view_count": j["view_count"],
-                "like_count": j["like_count"],
-                "comment_count": j["comment_count"]
+                "view_count": j["view_count"]
             })
 
             i = i + 1
@@ -89,9 +81,7 @@ class AutoYouTubeNotifications(discord.Cog):
                     url=f"https://youtube.com/watch?v={i['id']}",
                     image=i["thumbnail"],
                     fields=[
-                        discord.EmbedField(name="Views", value=i["view_count"], inline=True),
-                        discord.EmbedField(name="Likes", value=i["like_count"], inline=True),
-                        discord.EmbedField(name="Comments", value=i["comment_count"], inline=True)
+                        discord.EmbedField(name="Views", value=i["view_count"], inline=True)
                     ]
                 )
 
@@ -112,9 +102,7 @@ class AutoYouTubeNotifications(discord.Cog):
                             url=f"https://youtube.com/watch?v={i['id']}",
                             image=i["thumbnail"],
                             fields=[
-                                discord.EmbedField(name="Views", value=i["view_count"], inline=True),
-                                discord.EmbedField(name="Likes", value=i["like_count"], inline=True),
-                                discord.EmbedField(name="Comments", value=i["comment_count"], inline=True)
+                                discord.EmbedField(name="Views", value=i["view_count"], inline=True)
                             ]
                         )
 
