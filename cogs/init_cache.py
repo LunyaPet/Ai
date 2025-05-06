@@ -31,6 +31,12 @@ class InitCache(discord.Cog):
 
             # Init channels
             await asyncio.gather(*[self.init_channel(i) for i in guild.channels if not isinstance(i, CategoryChannel)])
+
+            print("[InitCache]Init cache", flush=True)
+            print("[InitCache]Init DM cache", flush=True)
+            # DM channels
+            await asyncio.gather(*[self.init_channel(i) for i in self.bot.private_channels])
+            print("[InitCache]Init DM cache done..", flush=True)
         except Exception as e:
             sentry_sdk.capture_exception(e)
             print("[InitCache]Init error", flush=True)
