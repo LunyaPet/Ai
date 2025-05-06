@@ -1,3 +1,5 @@
+import asyncio
+
 import discord
 import sentry_sdk
 import yt_dlp
@@ -90,9 +92,9 @@ class AutoTikTokNotifications(discord.Cog):
                         discord.EmbedField(name="Comments", value=i["comment_count"], inline=True)
                     ]
                 )
-
-                await channel.send(f"<@&{ROLE_TIKTOK}> mldchan posted a new video~!\nClick the title of the embed or click this link~ <{i['url']}>", embed=emb)
-
+                asyncio.get_event_loop().create_task(
+                    channel.send(f"<@&{ROLE_TIKTOK}> mldchan posted a new video~!\nClick the title of the embed or click this link~ <{i['url']}>", embed=emb)
+                )
                 existing_data["posted_ids"].append(i["id"])
                 existing_data["posted_data"].append(i)
 
@@ -116,7 +118,10 @@ class AutoTikTokNotifications(discord.Cog):
                         )
 
                         print(f"Update TikTok post for ID {i['id']}", flush=True)
-                        await msg.edit(embed=emb)
+
+                        asyncio.get_event_loop().create_task(
+                            msg.edit(embed=emb)
+                        )
 
             set_data("tt_notifications", existing_data)
         except Exception as e:

@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 
 import discord
@@ -85,7 +86,9 @@ class AutoYouTubeNotifications(discord.Cog):
                     ]
                 )
 
-                await channel.send(f"<@&{ROLE_VIDEOS}> mldchan posted a new video~!\nClick the title of the embed or click this link~ https://youtube.com/watch?v={i['id']}", embed=emb)
+                asyncio.get_event_loop().create_task(
+                    channel.send(f"<@&{ROLE_VIDEOS}> mldchan posted a new video~!\nClick the title of the embed or click this link~ https://youtube.com/watch?v={i['id']}", embed=emb)
+                )
 
                 existing_data["posted_ids"].append(i["id"])
                 existing_data["posted_data"].append(i)
@@ -107,7 +110,7 @@ class AutoYouTubeNotifications(discord.Cog):
                         )
 
                         print(f"Update YouTube post for ID {i['id']}", flush=True)
-                        await msg.edit(embed=emb)
+                        asyncio.get_event_loop().create_task(msg.edit(embed=emb))
 
             set_data("yt_notifications", existing_data)
         except Exception as e:
