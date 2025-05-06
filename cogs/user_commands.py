@@ -123,7 +123,7 @@ async def lookup_note_id(note_id: str, pinned: bool = False) -> list[discord.Emb
 
             resp_body = await resp.json()
 
-            image_url = resp_body["files"][0]["url"] if len(resp_body["files"]) > 0 and 'cw' is None else None
+            image_url = resp_body["files"][0]["url"] if len(resp_body["files"]) > 0 and resp_body['cw'] is None else None
 
             reaction_string = ""
 
