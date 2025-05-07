@@ -10,7 +10,7 @@ import aiohttp
 import discord
 import sentry_sdk
 from discord import Interaction
-from discord.ext import tasks
+from discord.ext import tasks, commands
 
 from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN, CHANNEL_MEMES
 from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
@@ -268,6 +268,26 @@ def get_cache_str():
 def clear_cache():
     compliments_cache.clear()
 
+
+async def uwuify(text: str) -> str | None:
+    # Send request
+    async with aiohttp.ClientSession() as session:
+        async with session.post("https://uwu.pm/api/v1/uwu", json={
+            "text": text,
+            "provider": "uwwwupp"
+        }) as res:
+
+            if res.status != 200:
+                return None
+
+            res = await res.json()
+
+            if "uwu" not in res or res["uwu"] is None:
+                return None
+
+            return res["uwu"]
+
+
 class UserCommands(discord.Cog):
     def __init__(self, bot: discord.Bot):
         self.bot = bot
@@ -486,6 +506,40 @@ class UserCommands(discord.Cog):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("Error!", ephemeral=True)
+
+    @user_commands.command(name="uwwwu", description="UwUify text", integration_types=[discord.IntegrationType.user_install])
+    async def uwuify_text(self, ctx: discord.ApplicationContext, text: str):
+        try:
+            # Verify right user
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+                return
+
+            # Send request
+            uwuified = await uwuify(text)
+            if uwuified is None:
+                await ctx.respond("An error occured!", ephemeral=True)
+                return
+
+            await ctx.respond(uwuified)
+        except Exception as e:
+            await ctx.respond(f"An error occured! {e=}", ephemeral=True)
+            sentry_sdk.capture_exception(e)
+
+    @discord.slash_command(name="uwuify", description="UwUify text")
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def uwuify_text_public(self, ctx: discord.ApplicationContext, text: str):
+        try:
+            # Send request
+            uwuified = await uwuify(text)
+            if uwuified is None:
+                await ctx.respond("An error occured!", ephemeral=True)
+                return
+
+            await ctx.respond(uwuified, ephemeral=True)
+        except Exception as e:
+            await ctx.respond(f"An error occured! {e=}", ephemeral=True)
+            sentry_sdk.capture_exception(e)
 
     @discord.message_command(name='Borrow Meme', description='Repost the message inside of the memes channel of mldchan\'s Discord server', integration_types=[discord.IntegrationType.user_install])
     async def borrow_meme(self, ctx: discord.ApplicationContext, message: discord.Message):
