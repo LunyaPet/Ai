@@ -13,6 +13,7 @@ from discord import Interaction
 from discord.ext import tasks, commands
 
 from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN, CHANNEL_MEMES
+from util.keysmash_generator import keysmash_ai
 from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
 from dateutil.parser import isoparse
 
@@ -528,8 +529,13 @@ class UserCommands(discord.Cog):
 
     @discord.slash_command(name="uwuify", description="UwUify text")
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def uwuify_text_public(self, ctx: discord.ApplicationContext, text: str):
+    async def uwuify_text_public(self, ctx: discord.ApplicationContext, text: str, use_ai: discord.Option(bool, description="Do you want to use the latest cutting-edge AI to uwuify?", default=True)):
         try:
+            # Cutting-edge AI check
+            if use_ai:
+                await ctx.respond(keysmash_ai(), ephemeral=True)
+                return
+
             # Send request
             uwuified = await uwuify(text)
             if uwuified is None:
