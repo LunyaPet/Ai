@@ -272,7 +272,7 @@ def clear_cache():
 
 async def uwuify(text: str) -> str | None:
     # Send request
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=1)) as session:
         async with session.post("https://uwu.pm/api/v1/uwu", json={
             "text": text,
             "provider": "uwwwupp"
@@ -509,7 +509,7 @@ class UserCommands(discord.Cog):
             await ctx.respond("Error!", ephemeral=True)
 
     @user_commands.command(name="uwwwu", description="UwUify text", integration_types=[discord.IntegrationType.user_install])
-    async def uwuify_text(self, ctx: discord.ApplicationContext, text: str):
+    async def uwuify_text(self, ctx: discord.ApplicationContext, text: str, private: bool = True):
         try:
             # Verify right user
             if ctx.user.id != int(OWNER):
@@ -522,7 +522,7 @@ class UserCommands(discord.Cog):
                 await ctx.respond("An error occured!", ephemeral=True)
                 return
 
-            await ctx.respond(uwuified)
+            await ctx.respond(uwuified, ephemeral=not private)
         except Exception as e:
             await ctx.respond(f"An error occured! {e=}", ephemeral=True)
             sentry_sdk.capture_exception(e)
