@@ -27,7 +27,7 @@ class ReportMessageOptions(discord.ui.View):
                 title="Report Status",
                 description="You reported a message recently. The message has violated the rules of the server and action has been taken against the content. Thank you for keeping the community safe.",
                 color=discord.Color.green(),
-                footer=discord.EmbedFooter(text="mldchan's Ai 藍")
+                footer=discord.EmbedFooter(text="mldchan's Ai 愛")
             )
 
             await reporter.send(embed=emb)
@@ -49,7 +49,7 @@ class ReportMessageOptions(discord.ui.View):
                 title="Report Status",
                 description="You reported a message recently. The message has not violated the rules of the server. Thank you for your concerns, it is better to report suspicious content rather than not reporting it at all.",
                 color=discord.Color.red(),
-                footer=discord.EmbedFooter(text="mldchan's Ai 藍")
+                footer=discord.EmbedFooter(text="mldchan's Ai 愛")
             )
 
             await reporter.send(embed=emb)
