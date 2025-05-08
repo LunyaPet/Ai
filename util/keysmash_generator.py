@@ -93,8 +93,10 @@ KANA = HIRAGANA + KATAKANA
 
 PLEADING_EMOJIS = (
     "🥺",
-    ":neofox_pleading: ",
-    ":neofox_pleading_reach: ",
+    "<:neocat_pleading:1369990471090307142> ",
+    "<:neocat_pleading_reach:1369990483962499092> ",
+    "<:neocat_floof_pleading:1369990492804091914> ",
+    "<:neocat_floof_pleading_reach:1369990500471537835> ",
 )
 
 FLUSTERED_EMOJIS = (
