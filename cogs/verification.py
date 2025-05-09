@@ -406,9 +406,12 @@ class FinishVerificationButton(discord.ui.View):
             # Assign the "Verified" role
             verified_role = interaction.guild.get_role(int(ROLE_VERIFIED))
             await interaction.user.add_roles(verified_role)
+            
+            # Ping member in General and send welcome message in there
+            general = interaction.guild.get_channel(int(CHANNEL_GENERAL))
+            await general.send(f"Welcome {interaction.user.mention} to the server~!")
 
             # Add the channel to the deletion queue (10 minutes)
-
             channel_delete_queue = get_data("verification/channel_delete_queue")
             if not 'queue' in channel_delete_queue:
                 channel_delete_queue['queue'] = []
