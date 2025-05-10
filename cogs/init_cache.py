@@ -141,6 +141,9 @@ class InitCache(discord.Cog):
 
     @discord.Cog.listener()
     async def on_message(self, message: discord.Message):
+        if message.channel.type == discord.ChannelType.private:
+            return
+
         self.cache_message(message)
 
     @discord.Cog.listener()
