@@ -2,6 +2,7 @@ import os.path
 import random
 import re
 import shutil
+import string
 import subprocess
 import sys
 import time
@@ -17,29 +18,206 @@ from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKE
 from util.keysmash_generator import keysmash_ai
 from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
 
-meow_cache = []
-colon_three_cache = []
+dm_cache = []
 
 
-class MeowComponent(discord.ui.View):
-    def __init__(self):
+def generate_meow():
+    meow = random.choice(["meow", "nya", "mraow", "mwrmmwra"])
+
+    if meow == "nya":
+        return "ny" + random.randint(1, 8) * "a"
+    elif meow == "mwrmmwra":
+        meow = "mr"
+        for i in range(random.randint(4, 12)):
+            meow += random.choice(["a", "w", "r"])
+
+        return meow
+
+    return meow
+
+
+def generate_fluster():
+    fluster_type = random.choice([">///<", "keysmash"])
+    if fluster_type == ">///<":
+        return ">" + "/" * random.randint(3, 10) + "<"
+    elif fluster_type == "keysmash":
+        return "".join(random.choices(string.ascii_lowercase, k=random.randint(3, 25))) + " >" + "/" * random.randint(3,
+                                                                                                                      10) + "<"
+    else:
+        raise ValueError("Invalid fluster type")
+
+
+class PickerComponent(discord.ui.View):
+    def __init__(self, type: str):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="Meow", style=discord.ButtonStyle.primary, custom_id="uc_meow")
-    async def meow(self, button: discord.ui.Button, interaction: discord.Interaction):
-        meows = ["Mraow~", "meow :3", "mwmrwmrma~ :3 ", "mwrmwmrwma :3", "mwrmwma :3", "meow", "mmrwwa uwu :3"]
-        meow_cache.append(interaction.user.id)
-        await interaction.respond(random.choice(meows), ephemeral=True)
+        if type == "meow":
+            meow_btn = discord.ui.Button(style=discord.ButtonStyle.primary, label="Meow", custom_id="picker_meow")
+            meow_btn.callback = self.meow
+            self.add_item(meow_btn)
+        elif type == ":3":
+            colon_three_button = discord.ui.Button(style=discord.ButtonStyle.primary, label="Meow",
+                                                   custom_id="picker_colon_three")
+            colon_three_button.callback = self.colon_three
+            self.add_item(colon_three_button)
+        elif type == "compliments":
+            # cute
+            cute_button = discord.ui.Button(style=discord.ButtonStyle.primary, label="such a cute girl~ :3",
+                                            custom_id="picker_cute")
+            cute_button.callback = self.cute
+            self.add_item(cute_button)
 
+            # pretty
+            pretty_button = discord.ui.Button(style=discord.ButtonStyle.primary, label="such a pretty girl~ :3",
+                                              custom_id="picker_pretty")
+            pretty_button.callback = self.pretty
+            self.add_item(pretty_button)
 
-class ColonThreeComoonent(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
+            # gorgeous
 
-    @discord.ui.button(label=":3", style=discord.ButtonStyle.primary, custom_id="uc_colon_three")
-    async def colon_three(self, button: discord.ui.Button, interaction: discord.Interaction):
-        colon_three_cache.append(interaction.user.id)
-        await interaction.respond(":" + "3" * random.randint(1, 5), ephemeral=True)
+            gorgeous_button = discord.ui.Button(style=discord.ButtonStyle.primary, label="such a gorgeous girl :3",
+                                                custom_id="picker_gorgeous")
+            gorgeous_button.callback = self.gorgeous
+            self.add_item(gorgeous_button)
+
+            # cool
+
+            cool_button = discord.ui.Button(style=discord.ButtonStyle.primary, label="such a cool girl~ :3",
+                                            custom_id="picker_cool")
+            cool_button.callback = self.cool
+            self.add_item(cool_button)
+
+            # good girl
+
+            good_girl_button = discord.ui.Button(style=discord.ButtonStyle.primary, label="such a goooood girl~ :3",
+                                                 custom_id="picker_good_girl")
+            good_girl_button.callback = self.good_girl
+            self.add_item(good_girl_button)
+        elif type == "meowat":
+            meow_at_button = discord.ui.Button(style=discord.ButtonStyle.primary, label="meow at Lunya :3",
+                                               custom_id="picker_meow_at")
+            meow_at_button.callback = self.meowat
+            self.add_item(meow_at_button)
+        elif type == "purrr":
+            purrr_button = discord.ui.Button(style=discord.ButtonStyle.primary, label="purrr :3",
+                                             custom_id="picker_purrr")
+            purrr_button.callback = self.purrr
+            self.add_item(purrr_button)
+        elif type == "girlkiss":
+            girlkiss_button = discord.ui.Button(style=discord.ButtonStyle.primary,
+                                                label="girlkiss a girl Lunya :3 (real) UwU",
+                                                custom_id="picker_girlkiss")
+            girlkiss_button.callback = self.girlkiss
+            self.add_item(girlkiss_button)
+        elif type == "boop":
+            boop_button = discord.ui.Button(style=discord.ButtonStyle.primary, label="boop :3", custom_id="picker_boop")
+            boop_button.callback = self.boop
+            self.add_item(boop_button)
+        elif type == "paws":
+            paws_at_you_button = discord.ui.Button(style=discord.ButtonStyle.primary, label="*paws at you*",
+                                                   custom_id="picker_paws")
+            paws_at_you_button.callback = self.paws_at_you
+            self.add_item(paws_at_you_button)
+        else:
+            raise ValueError("Invalid type")
+
+    async def meow(self, interaction: discord.Interaction):
+        try:
+            meow = generate_meow()
+            await interaction.respond(f"✅ Message sent\n{meow} :3")
+            dm_cache.append(f"{meow} by {interaction.user.mention} :3", ephemeral=True)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
+    async def colon_three(self, interaction: discord.Interaction):
+        try:
+            colon_three = '3' * random.randint(4, 12)
+            await interaction.respond(f"✅ Message sent\n:{colon_three} :3", ephemeral=True)
+            dm_cache.append(f"{colon_three} by {interaction.user.mention} :3")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
+    async def cute(self, interaction: discord.Interaction):
+        try:
+            await interaction.respond(f"✅ {generate_fluster()}", ephemeral=True)
+            dm_cache.append(f"{interaction.user.mention} said that you're such a cute girl~ :3")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
+    async def pretty(self, interaction: discord.Interaction):
+        try:
+            await interaction.respond(f"✅ {generate_fluster()}", ephemeral=True)
+            dm_cache.append(f"{interaction.user.mention} said that you're such a pretty girl~ :3")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
+    async def gorgeous(self, interaction: discord.Interaction):
+        try:
+            await interaction.respond(f"✅ {generate_fluster()}", ephemeral=True)
+            dm_cache.append(f"{interaction.user.mention} said that you're such a gorgeous girl~ :3")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
+    async def cool(self, interaction: discord.Interaction):
+        try:
+            await interaction.respond(f"✅ {generate_fluster()}", ephemeral=True)
+            dm_cache.append(f"{interaction.user.mention} said that you're such a coool girl~ :3")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
+    async def good_girl(self, interaction: discord.Interaction):
+        try:
+            await interaction.respond(f"✅ {generate_fluster()} {generate_fluster()}", ephemeral=True)
+            dm_cache.append(f"{interaction.user.mention} said that you're such a goooood girl~ :3")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
+    async def meowat(self, interaction: discord.Interaction):
+        try:
+            await interaction.respond(f"✅ meow -> <@{OWNER}>", ephemeral=True)
+            dm_cache.append(f"{interaction.user.mention} meowd at you :3")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
+    async def purrr(self, interaction: discord.Interaction):
+        try:
+            await interaction.respond("✅ *purrrrrrr*", ephemeral=True)
+            dm_cache.append(f"{interaction.user.mention} has *purrrrr* :3")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
+    async def girlkiss(self, interaction: discord.Interaction):
+        try:
+            await interaction.respond("✅ Girls were kissed :3", ephemeral=True)
+            dm_cache.append(f"{interaction.user.mention} has give you girlkiss :3333333333")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
+    async def boop(self, interaction: discord.Interaction):
+        try:
+            await interaction.respond("✅ >///<", ephemeral=True)
+            dm_cache.append(f"{interaction.user.mention} has booped you :3")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
+    async def paws_at_you(self, interaction: discord.Interaction):
+        try:
+            await interaction.respond("✅ *paws at mldchan*", ephemeral=True)
+            dm_cache.append(f"{interaction.user.mention} *paws at you* :3")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
 
 
 class SillyModal(discord.ui.Modal):
@@ -68,6 +246,7 @@ class SillyComponent(discord.ui.View):
     @discord.ui.button(label=":3", style=discord.ButtonStyle.primary)
     async def silly(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.send_modal(SillyModal(self.title, self.label, self.placeholder))
+
 
 def generate_user_embed(resp_body):
     host = FEDI_INSTANCE if resp_body["host"] is None else resp_body["host"]
@@ -127,7 +306,7 @@ async def lookup_user(user_name: str, user_inst: str | None, disable_pinned: boo
             return [emb, *pinned_notes]
 
 
-def generate_note_embed(note, pinned = False):
+def generate_note_embed(note, pinned=False):
     image_url = note["files"][0]["url"] if len(note["files"]) > 0 and note[
         'cw'] is None else None
 
@@ -189,7 +368,6 @@ async def lookup_note_id(note_id: str, pinned: bool = False) -> list[discord.Emb
             "noteId": note_id
         }) as resp:
             if resp.status != 200:
-
                 return None
 
             resp_body = await resp.json()
@@ -208,7 +386,6 @@ async def get_posts_under_hashtags(lookup_str) -> list[discord.Embed] | None:
             'tag': lookup_str[1:]
         }) as resp:
             if resp.status != 200:
-
                 return None
 
             body = await resp.json()
@@ -229,7 +406,6 @@ async def get_posts_under_hashtags(lookup_str) -> list[discord.Embed] | None:
             'tag': lookup_str[1:]
         }) as resp:
             if resp.status != 200:
-
                 return None
 
             body = await resp.json()
@@ -337,56 +513,25 @@ async def search_notes(query, media_type, session, start_time, count):
 
         resp_body = await resp.json()
 
-
-
         embeds = []
 
         for i in resp_body:
             if i["cw"] is not None:
-
                 continue
 
             emb = generate_note_embed(i)
 
             if emb is None:
-
                 continue
 
             embeds.append(emb)
 
             if len(embeds) >= count:
-
                 break
 
         end_time = time.time()
         diff = round((end_time - start_time) * 1000)
         return (embeds[:count], diff) if len(embeds) > 0 else None
-
-
-compliments_cache = {}
-
-
-def count_cache(compl_type: str, user_id: str):
-    if compl_type not in compliments_cache:
-        compliments_cache[compl_type] = []
-
-    compliments_cache[compl_type].append(user_id)
-
-
-def get_cache_str():
-    compl_str = "You were called "
-    for (k, v) in compliments_cache.items():
-        compl_str += f"{len(v)}x {k} by "
-        for i in v:
-            compl_str += f"<@{i}>, "
-
-        compl_str = compl_str[:-2] + ", "
-
-    return compl_str[:-2]
-
-
-def clear_cache():
-    compliments_cache.clear()
 
 
 async def uwuify(text: str) -> str | None:
@@ -414,9 +559,14 @@ class UserCommands(discord.Cog):
 
     @discord.Cog.listener()
     async def on_ready(self):
-        self.bot.add_view(MeowComponent())
-        self.bot.add_view(ColonThreeComoonent())
-        self.bot.add_view(ComplimentsView(self.bot))
+        self.bot.add_view(PickerComponent("meow"))
+        self.bot.add_view(PickerComponent(":3"))
+        self.bot.add_view(PickerComponent("compliments"))
+        self.bot.add_view(PickerComponent("meowat"))
+        self.bot.add_view(PickerComponent("purrr"))
+        self.bot.add_view(PickerComponent("girlkiss"))
+        self.bot.add_view(PickerComponent("boop"))
+        self.bot.add_view(PickerComponent("paws"))
         self.handle_queue.start()
 
     user_commands = discord.SlashCommandGroup(name='user', description='User commands',
@@ -454,22 +604,21 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occurred while executing the command.", ephemeral=True)
 
-    @user_commands.command(name="meow", description="meow", integration_types=[discord.IntegrationType.user_install])
-    async def meow(self, ctx: discord.ApplicationContext):
-        if ctx.user.id != int(OWNER):
-            await ctx.respond("You are not authorized to use this command!", ephemeral=True)
-            return
+    @user_commands.command(name="picker")
+    async def picker(self, ctx: discord.ApplicationContext,
+                     message: str,
+                     type: discord.Option(str,
+                                          choices=["meow", ":3", "compliments", "meowat", "purrr", "girlkiss", "boop",
+                                                   "paws"])):
+        try:
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+                return
 
-        await ctx.respond("meow", view=MeowComponent())
-
-    @user_commands.command(name="colon_three", description=":3",
-                           integration_types=[discord.IntegrationType.user_install])
-    async def colon_three(self, ctx: discord.ApplicationContext):
-        if ctx.user.id != int(OWNER):
-            await ctx.respond("You are not authorized to use this command!", ephemeral=True)
-            return
-
-        await ctx.respond(":3", view=ColonThreeComoonent())
+            await ctx.respond(message, view=PickerComponent(type))
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await ctx.respond("An error occurred while executing the command.", ephemeral=True)
 
     @user_commands.command(name="silly", description="silly", integration_types=[discord.IntegrationType.user_install])
     async def silly(self, ctx: discord.ApplicationContext, text: str, title: str, label: str, placeholder: str = ""):
@@ -521,8 +670,6 @@ class UserCommands(discord.Cog):
 
             # Let's attempt to generate embed based on search function
             emb = await search(q, content_type, media_type, count)
-
-
 
             if emb is None:
                 await ctx.followup.send("Error! No result")
@@ -636,20 +783,6 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occured quarantining this user.", ephemeral=True)
 
-    @user_commands.command(name='compliments', description='>//////<',
-                           integration_types=[discord.IntegrationType.user_install])
-    async def compliments(self, ctx: discord.ApplicationContext):
-        try:
-            # Verify right user
-            if ctx.user.id != int(OWNER):
-                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
-                return
-
-            await ctx.respond("Send a girl some compliments! :3", view=ComplimentsView(self.bot))
-        except Exception as e:
-            sentry_sdk.capture_exception(e)
-            await ctx.respond("Error!", ephemeral=True)
-
     @user_commands.command(name="uwwwu", description="UwUify text",
                            integration_types=[discord.IntegrationType.user_install])
     async def uwuify_text(self, ctx: discord.ApplicationContext, text: str, private: bool = True):
@@ -721,83 +854,17 @@ class UserCommands(discord.Cog):
             await ctx.respond("Error!", ephemeral=True)
             sentry_sdk.capture_exception(e)
 
-    @tasks.loop(seconds=5)
+    @tasks.loop(seconds=20)
     async def handle_queue(self):
         try:
-            if len(compliments_cache) == 0 and len(meow_cache) == 0 and len(colon_three_cache) == 0:
+            if len(dm_cache) == 0:
                 return
 
-            message = get_cache_str() if len(compliments_cache) > 0 else ""
-
-            meows = ["Mraow~", "meow :3", "mwmrwmrma~ :3 ", "mwrmwmrwma :3", "mwrmwma :3", "meow", "mmrwwa uwu :3"]
-
-            for i in meow_cache:
-                message += f"{random.choice(meows)} :3 by <@{i}>\n"
-
-            for i in colon_three_cache:
-                message += ":" + "3" * random.randint(1, 5) + f" by <@{i}>\n"
+            message = "\n".join(dm_cache)
 
             owner = self.bot.get_user(int(OWNER))
             await owner.send(message)
 
-            clear_cache()
-            meow_cache.clear()
-            colon_three_cache.clear()
+            dm_cache.clear()
         except Exception as e:
             sentry_sdk.capture_exception(e)
-
-
-class ComplimentsView(discord.ui.View):
-    def __init__(self, bot: discord.Bot):
-        super().__init__(timeout=None)
-        self.bot = bot
-
-    @discord.ui.button(label="cute!", style=discord.ButtonStyle.primary, custom_id="cute")
-    async def cute(self, button: discord.ui.Button, interaction: discord.Interaction):
-        try:
-            count_cache("cute", str(interaction.user.id))
-
-            await interaction.respond("Sent!", ephemeral=True)
-        except Exception as e:
-            sentry_sdk.capture_exception(e)
-            await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
-
-    @discord.ui.button(label="pretty!", style=discord.ButtonStyle.primary, custom_id="pretty")
-    async def pretty(self, button: discord.ui.Button, interaction: discord.Interaction):
-        try:
-            count_cache("pretty", str(interaction.user.id))
-
-            await interaction.respond("Sent!", ephemeral=True)
-        except Exception as e:
-            sentry_sdk.capture_exception(e)
-            await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
-
-    @discord.ui.button(label="gorgeous!", style=discord.ButtonStyle.primary, custom_id="gorgeous")
-    async def gorgeous(self, button: discord.ui.Button, interaction: discord.Interaction):
-        try:
-            count_cache("gorgeous", str(interaction.user.id))
-
-            await interaction.respond("Sent!", ephemeral=True)
-        except Exception as e:
-            sentry_sdk.capture_exception(e)
-            await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
-
-    @discord.ui.button(label="cool!", style=discord.ButtonStyle.primary, custom_id="cool")
-    async def cool(self, button: discord.ui.Button, interaction: discord.Interaction):
-        try:
-            count_cache("cool", str(interaction.user.id))
-
-            await interaction.respond("Sent!", ephemeral=True)
-        except Exception as e:
-            sentry_sdk.capture_exception(e)
-            await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
-
-    @discord.ui.button(label="good girl!", style=discord.ButtonStyle.primary, custom_id="good_girl")
-    async def good_girl(self, button: discord.ui.Button, interaction: discord.Interaction):
-        try:
-            count_cache("good girl", str(interaction.user.id))
-
-            await interaction.respond("Sent!", ephemeral=True)
-        except Exception as e:
-            sentry_sdk.capture_exception(e)
-            await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
