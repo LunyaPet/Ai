@@ -1,10 +1,12 @@
 import asyncio
 import os.path
 import random
+import re
 import shutil
 import subprocess
 import sys
 import time
+from idlelib.window import add_windows_to_menu
 
 import aiohttp
 import discord
@@ -178,6 +180,50 @@ async def lookup_note_id(note_id: str, pinned: bool = False) -> list[discord.Emb
             return [emb]
 
 
+async def get_posts_under_hashtags(lookup_str) -> list[discord.Embed] | None:
+    # Lookup_str: #art for example
+    embeds = []
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"https://{FEDI_INSTANCE}/api/hashtags/show", json={
+            'tag': lookup_str[1:]
+        }) as resp:
+            if resp.status != 200:
+                print("api/hashtags/show status", resp.status)
+                return None
+
+            body = await resp.json()
+
+            embeds.append(
+                discord.Embed(
+                    title=f"Hashtag: {lookup_str}",
+                    fields=[
+                        discord.EmbedField(name="Posts", value=str(body['attachedUsersCount'])),
+                        discord.EmbedField(name="User Mentions", value=str(body['mentionedUsersCount']))
+                    ],
+                    color=discord.Color.from_rgb(255, 119, 255)
+                )
+            )
+
+
+        async with session.post(f"https://{FEDI_INSTANCE}/api/notes/search-by-tag", json={
+            'limit': 10,
+            'tag': lookup_str[1:]
+        }) as resp:
+            if resp.status != 200:
+                print('/api/notes/search-by-tag returned', resp.status)
+                return None
+
+            body = await resp.json()
+
+            for i in body[:3]:
+                embed = await lookup_note_id(i["id"])
+                if embed:
+                    embeds.extend(embed)
+
+    return embeds
+
+
 async def lookup_by_str(lookup_str: str) -> list[discord.Embed] | None:
 
     user_mention = lookup_str.split("@")
@@ -187,6 +233,10 @@ async def lookup_by_str(lookup_str: str) -> list[discord.Embed] | None:
     elif len(user_mention) == 3:
         # Remote user lookup
         return await lookup_user(user_mention[1], user_mention[2])
+
+    # Check hashtag
+    if re.match(r"#[a-zA-Z0-9]+", lookup_str):
+        return await get_posts_under_hashtags(lookup_str)
 
     # Lookup note by MisskeyID
 
