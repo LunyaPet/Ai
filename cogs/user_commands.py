@@ -216,13 +216,18 @@ def get_poll_str(poll: dict | None) -> str:
     return message.rstrip()
 
 
-async def search(query: str) -> tuple[list[discord.Embed], int] | None:
+async def search(query: str, media_type: str) -> tuple[list[discord.Embed], int] | None:
     start_time = time.time()
     async with aiohttp.ClientSession() as session:
-        async with session.post(f"https://{FEDI_INSTANCE}/api/notes/search", json={
+        body = {
             "query": query,
             "limit": 10
-        }) as resp:
+        }
+        
+        if media_type != "all" and media_type in ["image", "video"]:
+            body["filetype"] = media_type
+        
+        async with session.post(f"https://{FEDI_INSTANCE}/api/notes/search", json=body) as resp:
             if resp.status != 200:
                 return None
 
@@ -231,6 +236,9 @@ async def search(query: str) -> tuple[list[discord.Embed], int] | None:
             embeds = []
 
             for i in resp_body:
+                if i["cw"] is not None:
+                    continue
+
                 emb = await lookup_note_id(i["id"])
 
                 if emb is None:
@@ -377,7 +385,8 @@ class UserCommands(discord.Cog):
             await ctx.respond("Error when looking up!", ephemeral=True)
 
     @fedi_group.command(name="search", description="Search on fedi", integration_types=[discord.IntegrationType.user_install])
-    async def search(self, ctx: discord.ApplicationContext, q: str):
+    @discord.option(name="media_type", choices=["image", "video"])
+    async def search(self, ctx: discord.ApplicationContext, q: str, media_type: str = 'all'):
         try:
             # Verify right user
             if ctx.user.id != int(OWNER):
@@ -387,7 +396,7 @@ class UserCommands(discord.Cog):
             await ctx.defer()
 
             # Let's attempt to generate embed based on search function
-            emb = await search(q)
+            emb = await search(q, media_type)
 
             if emb is None:
                 await ctx.followup.send("Error! No result")
