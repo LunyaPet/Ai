@@ -68,7 +68,7 @@ class SillyComponent(discord.ui.View):
     async def silly(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.send_modal(SillyModal(self.title, self.label, self.placeholder))
 
-async def lookup_user(user_name: str, user_inst: str | None) -> list[discord.Embed] | None:
+async def lookup_user(user_name: str, user_inst: str | None, disable_pinned: bool = False) -> list[discord.Embed] | None:
     async with aiohttp.ClientSession() as session:
         body = {
             "username": user_name,
@@ -103,6 +103,9 @@ async def lookup_user(user_name: str, user_inst: str | None) -> list[discord.Emb
 
             if user_inst is not None:
                 emb.set_footer(text="The information may not be accurate as it comes from a remote instance.")
+
+            if disable_pinned:
+                return [emb]
 
             pinned_notes = []
             i = 0
@@ -224,15 +227,15 @@ async def get_posts_under_hashtags(lookup_str) -> list[discord.Embed] | None:
     return embeds
 
 
-async def lookup_by_str(lookup_str: str) -> list[discord.Embed] | None:
+async def lookup_by_str(lookup_str: str, disable_pinned: bool = False) -> list[discord.Embed] | None:
 
     user_mention = lookup_str.split("@")
     if len(user_mention) == 2:
         # Local user lookup
-        return await lookup_user(user_mention[1], None)
+        return await lookup_user(user_mention[1], None, disable_pinned=disable_pinned)
     elif len(user_mention) == 3:
         # Remote user lookup
-        return await lookup_user(user_mention[1], user_mention[2])
+        return await lookup_user(user_mention[1], user_mention[2], disable_pinned=disable_pinned)
 
     # Check hashtag
     if re.match(r"#[a-zA-Z0-9]+", lookup_str):
@@ -415,7 +418,7 @@ class UserCommands(discord.Cog):
     fedi_group = discord.SlashCommandGroup(name="fedi", description="Fedi commands", integration_types=[discord.IntegrationType.user_install])
 
     @fedi_group.command(name="lookup", description="Lookup fedi user/post", integration_types=[discord.IntegrationType.user_install])
-    async def lookup_post(self, ctx: discord.ApplicationContext, lookup_str: str):
+    async def lookup_post(self, ctx: discord.ApplicationContext, lookup_str: str, disable_pinned: bool = False):
         try:
             # Verify right user
             if ctx.user.id != int(OWNER):
@@ -423,7 +426,7 @@ class UserCommands(discord.Cog):
                 return
 
             # Let's attempt generate embed based on lookup function
-            emb = await lookup_by_str(lookup_str)
+            emb = await lookup_by_str(lookup_str, disable_pinned=disable_pinned)
 
             if emb is None:
                 await ctx.respond("Failed to lookup!", ephemeral=True)
