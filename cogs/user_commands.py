@@ -269,7 +269,7 @@ def get_poll_str(poll: dict | None) -> str:
     return message.rstrip()
 
 
-async def search(query: str, media_type: str) -> tuple[list[discord.Embed], int] | None:
+async def search(query: str, content_type: str, media_type: str) -> tuple[list[discord.Embed], int] | None:
     start_time = time.time()
     async with aiohttp.ClientSession() as session:
         body = {
@@ -279,32 +279,71 @@ async def search(query: str, media_type: str) -> tuple[list[discord.Embed], int]
         
         if media_type != "all" and media_type in ["image", "video"]:
             body["filetype"] = media_type
-        
-        async with session.post(f"https://{FEDI_INSTANCE}/api/notes/search", json=body) as resp:
-            if resp.status != 200:
-                return None
 
-            resp_body = await resp.json()
+        if content_type == 'notes':
+            val = await search_notes(body, session, start_time)
+            return val
+        elif content_type == 'users':
+            val = await search_users(query, session, start_time)
+            return val
 
-            embeds = []
+        raise ValueError(f"content_type is out of range: {content_type} is not a valid value")
 
-            for i in resp_body:
-                if i["cw"] is not None:
-                    continue
 
-                emb = await lookup_note_id(i["id"])
+async def search_users(query, session, start_time):
+    async with session.post(f"https://{FEDI_INSTANCE}/api/users/search", json={
+        'limit': 10,
+        'query': query
+    }) as resp:
+        if resp.status != 200:
+            return None
 
-                if emb is None:
-                    continue
+        resp_body = await resp.json()
 
-                embeds.extend(emb)
+        embeds = []
 
-                if len(embeds) >= 3:
-                    break
+        for i in resp_body:
+            emb = await lookup_user(i["username"], None if i['host'] is None else i['host'], disable_pinned=True)
 
-            end_time = time.time()
-            diff = round((end_time - start_time) * 1000)
-            return (embeds, diff) if len(embeds) > 0 else None
+            if emb is None:
+                continue
+
+            embeds.extend(emb)
+
+            if len(embeds) >= 3:
+                break
+
+        end_time = time.time()
+        diff = round((end_time - start_time) * 1000)
+        return (embeds, diff) if len(embeds) > 0 else None
+
+
+async def search_notes(body, session, start_time):
+    async with session.post(f"https://{FEDI_INSTANCE}/api/notes/search", json=body) as resp:
+        if resp.status != 200:
+            return None
+
+        resp_body = await resp.json()
+
+        embeds = []
+
+        for i in resp_body:
+            if i["cw"] is not None:
+                continue
+
+            emb = await lookup_note_id(i["id"])
+
+            if emb is None:
+                continue
+
+            embeds.extend(emb)
+
+            if len(embeds) >= 3:
+                break
+
+        end_time = time.time()
+        diff = round((end_time - start_time) * 1000)
+        return (embeds, diff) if len(embeds) > 0 else None
 
 
 compliments_cache = {}
@@ -439,7 +478,8 @@ class UserCommands(discord.Cog):
 
     @fedi_group.command(name="search", description="Search on fedi", integration_types=[discord.IntegrationType.user_install])
     @discord.option(name="media_type", choices=["image", "video"])
-    async def search(self, ctx: discord.ApplicationContext, q: str, media_type: str = 'all'):
+    @discord.option(name="content_type", choices=["notes", "users"])
+    async def search(self, ctx: discord.ApplicationContext, q: str, content_type: str = 'notes', media_type: str = 'all'):
         try:
             # Verify right user
             if ctx.user.id != int(OWNER):
@@ -449,7 +489,7 @@ class UserCommands(discord.Cog):
             await ctx.defer()
 
             # Let's attempt to generate embed based on search function
-            emb = await search(q, media_type)
+            emb = await search(q, content_type, media_type)
 
             if emb is None:
                 await ctx.followup.send("Error! No result")
