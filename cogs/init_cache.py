@@ -86,7 +86,8 @@ class InitCache(discord.Cog):
                     "emojiid": i.emoji.id,
                     "count": i.count
                 } for i in message.reactions],
-                "embeds": [i.to_dict() for i in message.embeds]
+                "embeds": [i.to_dict() for i in message.embeds],
+                "sentat": message.created_at.isoformat(timespec="minutes")
             })
 
         if not any(i['id'] == message.author.id for i in self.cached_users):

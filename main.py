@@ -1,11 +1,9 @@
 import logging
-import os
 import sys
 
 import discord
 import sentry_sdk
 from discord.ext import commands
-
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.asyncio import AsyncioIntegration
 
@@ -18,6 +16,7 @@ from cogs.general_cleaner import GeneralCleaner
 from cogs.init_cache import InitCache
 from cogs.media_threads import MediaThreads
 from cogs.message_reporting import MessageReporting
+from cogs.statistics import ServerStatistics
 from cogs.user_commands import UserCommands
 from cogs.verification import Verification
 from constants import DISCORD_TOKEN, SENTRY_DSN
@@ -85,5 +84,6 @@ bot.add_cog(GeneralCleaner(bot))
 bot.add_cog(MediaThreads(bot))
 bot.add_cog(FunnyAutoResponse(bot))
 bot.add_cog(InitCache(bot))
+bot.add_cog(ServerStatistics(bot))
 
 bot.run(DISCORD_TOKEN)
