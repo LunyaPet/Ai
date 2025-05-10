@@ -1,4 +1,3 @@
-import asyncio
 import os.path
 import random
 import re
@@ -6,21 +5,21 @@ import shutil
 import subprocess
 import sys
 import time
-from idlelib.window import add_windows_to_menu
 
 import aiohttp
 import discord
 import sentry_sdk
+from dateutil.parser import isoparse
 from discord import Interaction
 from discord.ext import tasks, commands
 
 from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN, CHANNEL_MEMES
 from util.keysmash_generator import keysmash_ai
 from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
-from dateutil.parser import isoparse
 
 meow_cache = []
 colon_three_cache = []
+
 
 class MeowComponent(discord.ui.View):
     def __init__(self):
@@ -32,6 +31,7 @@ class MeowComponent(discord.ui.View):
         meow_cache.append(interaction.user.id)
         await interaction.respond(random.choice(meows), ephemeral=True)
 
+
 class ColonThreeComoonent(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -40,6 +40,7 @@ class ColonThreeComoonent(discord.ui.View):
     async def colon_three(self, button: discord.ui.Button, interaction: discord.Interaction):
         colon_three_cache.append(interaction.user.id)
         await interaction.respond(":" + "3" * random.randint(1, 5), ephemeral=True)
+
 
 class SillyModal(discord.ui.Modal):
     def __init__(self, title: str, label: str, placeholder: str):
@@ -68,7 +69,33 @@ class SillyComponent(discord.ui.View):
     async def silly(self, button: discord.ui.Button, interaction: discord.Interaction):
         await interaction.response.send_modal(SillyModal(self.title, self.label, self.placeholder))
 
-async def lookup_user(user_name: str, user_inst: str | None, disable_pinned: bool = False) -> list[discord.Embed] | None:
+def generate_user_embed(resp_body):
+    host = FEDI_INSTANCE if resp_body["host"] is None else resp_body["host"]
+    desc = resp_body["description"][:1500]
+    if desc != resp_body["description"]:
+        desc = desc + '...'
+
+    emb = discord.Embed(
+        title=f"{resp_body['name']} (@{resp_body['username']}@{host})",
+        description=desc,
+        thumbnail=resp_body["avatarUrl"],
+        fields=[
+            discord.EmbedField(name="Notes", value=resp_body["notesCount"], inline=True),
+            discord.EmbedField(name="Followers", value=resp_body["followersCount"], inline=True),
+            discord.EmbedField(name="Following", value=resp_body["followingCount"], inline=True)
+        ],
+        url=f'https://{FEDI_INSTANCE}/@{resp_body["username"]}@{host}',
+        color=discord.Color.from_rgb(255, 119, 255)
+    )
+
+    if resp_body["host"] is not None:
+        emb.set_footer(text="The information may not be accurate as it comes from a remote instance.")
+
+    return emb
+
+
+async def lookup_user(user_name: str, user_inst: str | None, disable_pinned: bool = False, pinned_count: int = 3) -> \
+        list[discord.Embed] | None:
     async with aiohttp.ClientSession() as session:
         body = {
             "username": user_name,
@@ -83,26 +110,7 @@ async def lookup_user(user_name: str, user_inst: str | None, disable_pinned: boo
 
             resp_body = await resp.json()
 
-            host = FEDI_INSTANCE if user_inst is None else user_inst
-            desc = resp_body["description"][:1500]
-            if desc != resp_body["description"]:
-                desc = desc + '...'
-
-            emb = discord.Embed(
-                title=f"{resp_body['name']} (@{resp_body['username']}@{host})",
-                description=desc,
-                thumbnail=resp_body["avatarUrl"],
-                fields=[
-                    discord.EmbedField(name="Notes", value=resp_body["notesCount"], inline=True),
-                    discord.EmbedField(name="Followers", value=resp_body["followersCount"], inline=True),
-                    discord.EmbedField(name="Following", value=resp_body["followingCount"], inline=True)
-                ],
-                url=f'https://{FEDI_INSTANCE}/@{resp_body["username"]}@{host}',
-                color=discord.Color.from_rgb(255, 119, 255)
-            )
-
-            if user_inst is not None:
-                emb.set_footer(text="The information may not be accurate as it comes from a remote instance.")
+            emb = generate_user_embed(resp_body)
 
             if disable_pinned:
                 return [emb]
@@ -111,12 +119,68 @@ async def lookup_user(user_name: str, user_inst: str | None, disable_pinned: boo
             i = 0
             for post in resp_body["pinnedNotes"]:
                 i = i + 1
-                if i > 2:
+                if i > pinned_count:
                     break
 
-                pinned_notes.extend(await lookup_note_id(post["id"], pinned=True))
+                pinned_notes.append(generate_note_embed(post, pinned=True))
 
             return [emb, *pinned_notes]
+
+
+def generate_note_embed(note, pinned = False):
+    image_url = note["files"][0]["url"] if len(note["files"]) > 0 and note[
+        'cw'] is None else None
+
+    reaction_string = ""
+
+    if note["repliesCount"] > 0:
+        reaction_string = f'{note["repliesCount"]} replies | '
+
+    if note['renoteCount'] > 0:
+        reaction_string = f'{note["renoteCount"]} renotes | '
+
+    for k, v in note["reactions"].items():
+        if len(k.split("@")) > 1:
+            k = f'{k.split("@")[0]}:'
+
+        reaction_string += f'{v}x {k} | '
+
+    reaction_string = reaction_string[:-3]
+
+    host = FEDI_INSTANCE if note['user']['host'] is None else note['user']['host']
+
+    pinned_post = "Pinned note by " if pinned else ""
+
+    desc = note["text"] if note["cw"] is None else f'CW: {note["cw"]}\n\n'
+
+    if note['cw'] is not None:
+        if len(note['files']) > 0 and len(note['text']) > 0:
+            desc += "(Open the link in order to view the text and media)"
+        elif len(note['files']) > 0 and len(note['text']) == 0:
+            desc += "(Open the link in order to view the media)"
+        else:
+            desc += "(Open the link in order to view the text)"
+
+    if 'poll' in note and note['poll'] is not None and note['cw'] is None:
+        desc += get_poll_str(note['poll'])
+
+    emb = discord.Embed(
+        title=f"{'Pinned ' if pinned else ''}Note by {note['user']['name']} (@{note['user']['username']}@{host})",
+        url=f"https://{FEDI_INSTANCE}/notes/{note['id']}",
+        description=desc,
+        image=image_url,
+        author=discord.EmbedAuthor(
+            name=f"{pinned_post}{note['user']['name']} (@{note['user']['username']}@{host})",
+            icon_url=note["user"]["avatarUrl"],
+            url=f'https://{FEDI_INSTANCE}/@{note["user"]["username"]}@{host}'
+        ),
+        color=discord.Color.from_rgb(255, 119, 255),
+        footer=discord.EmbedFooter(
+            text=reaction_string
+        ) if len(reaction_string) > 0 else None
+    )
+
+    return emb
 
 
 async def lookup_note_id(note_id: str, pinned: bool = False) -> list[discord.Embed] | None:
@@ -125,60 +189,12 @@ async def lookup_note_id(note_id: str, pinned: bool = False) -> list[discord.Emb
             "noteId": note_id
         }) as resp:
             if resp.status != 200:
+                print(f"Failed to fetch {note_id}: Status {resp.status}")
                 return None
 
             resp_body = await resp.json()
 
-            image_url = resp_body["files"][0]["url"] if len(resp_body["files"]) > 0 and resp_body['cw'] is None else None
-
-            reaction_string = ""
-
-            if resp_body["repliesCount"] > 0:
-                reaction_string = f'{resp_body["repliesCount"]} replies | '
-
-            if resp_body['renoteCount'] > 0:
-                reaction_string = f'{resp_body["renoteCount"]} renotes | '
-
-            for k, v in resp_body["reactions"].items():
-                if len(k.split("@")) > 1:
-                    k = f'{k.split("@")[0]}:'
-
-                reaction_string += f'{v}x {k} | '
-
-            reaction_string = reaction_string[:-3]
-
-            host = FEDI_INSTANCE if resp_body['user']['host'] is None else resp_body['user']['host']
-
-            pinned_post = "Pinned note by " if pinned else ""
-
-            desc = resp_body["text"] if resp_body["cw"] is None else f'CW: {resp_body["cw"]}\n\n'
-
-            if resp_body['cw'] is not None:
-                if len(resp_body['files']) > 0 and len(resp_body['text']) > 0:
-                    desc += "(Open the link in order to view the text and media)"
-                elif len(resp_body['files']) > 0 and len(resp_body['text']) == 0:
-                    desc += "(Open the link in order to view the media)"
-                else:
-                    desc += "(Open the link in order to view the text)"
-
-            if 'poll' in resp_body and resp_body['poll'] is not None and resp_body['cw'] is None:
-                desc += get_poll_str(resp_body['poll'])
-
-            emb = discord.Embed(
-                title=f"{'Pinned ' if pinned else ''}Note by {resp_body['user']['name']} (@{resp_body['user']['username']}@{host})",
-                url=f"https://{FEDI_INSTANCE}/notes/{resp_body['id']}",
-                description=desc,
-                image=image_url,
-                author=discord.EmbedAuthor(
-                    name=f"{pinned_post}{resp_body['user']['name']} (@{resp_body['user']['username']}@{host})",
-                    icon_url=resp_body["user"]["avatarUrl"],
-                    url=f'https://{FEDI_INSTANCE}/@{resp_body["user"]["username"]}@{host}'
-                ),
-                color=discord.Color.from_rgb(255, 119, 255),
-                footer=discord.EmbedFooter(
-                    text=reaction_string
-                ) if len(reaction_string) > 0 else None
-            )
+            emb = generate_note_embed(resp_body, pinned)
 
             return [emb]
 
@@ -208,7 +224,6 @@ async def get_posts_under_hashtags(lookup_str) -> list[discord.Embed] | None:
                 )
             )
 
-
         async with session.post(f"https://{FEDI_INSTANCE}/api/notes/search-by-tag", json={
             'limit': 10,
             'tag': lookup_str[1:]
@@ -220,30 +235,29 @@ async def get_posts_under_hashtags(lookup_str) -> list[discord.Embed] | None:
             body = await resp.json()
 
             for i in body[:3]:
-                embed = await lookup_note_id(i["id"])
-                if embed:
-                    embeds.extend(embed)
+                embeds.append(generate_note_embed(i))
 
     return embeds
 
 
-async def lookup_by_str(lookup_str: str, disable_pinned: bool = False) -> list[discord.Embed] | None:
-
+async def lookup_by_str(lookup_str: str, disable_pinned: bool = False, pinned_count: int = 3) -> list[
+                                                                                                     discord.Embed] | None:
     user_mention = lookup_str.split("@")
     if len(user_mention) == 2:
         # Local user lookup
-        return await lookup_user(user_mention[1], None, disable_pinned=disable_pinned)
+        return await lookup_user(user_mention[1], None, disable_pinned=disable_pinned, pinned_count=pinned_count)
     elif len(user_mention) == 3:
         # Remote user lookup
-        return await lookup_user(user_mention[1], user_mention[2], disable_pinned=disable_pinned)
+        return await lookup_user(user_mention[1], user_mention[2], disable_pinned=disable_pinned,
+                                 pinned_count=pinned_count)
 
     # Check hashtag
     if re.match(r"#[a-zA-Z0-9]+", lookup_str):
         return await get_posts_under_hashtags(lookup_str)
 
     # Lookup note by MisskeyID
-
     return await lookup_note_id(lookup_str)
+
 
 def get_poll_str(poll: dict | None) -> str:
     if poll is None:
@@ -269,28 +283,18 @@ def get_poll_str(poll: dict | None) -> str:
     return message.rstrip()
 
 
-async def search(query: str, content_type: str, media_type: str) -> tuple[list[discord.Embed], int] | None:
+async def search(query: str, content_type: str, media_type: str, count: int) -> tuple[list[discord.Embed], int] | None:
     start_time = time.time()
     async with aiohttp.ClientSession() as session:
-        body = {
-            "query": query,
-            "limit": 10
-        }
-        
-        if media_type != "all" and media_type in ["image", "video"]:
-            body["filetype"] = media_type
-
         if content_type == 'notes':
-            val = await search_notes(body, session, start_time)
-            return val
+            return await search_notes(query, media_type, session, start_time, count)
         elif content_type == 'users':
-            val = await search_users(query, session, start_time)
-            return val
+            return await search_users(query, session, start_time, count)
 
         raise ValueError(f"content_type is out of range: {content_type} is not a valid value")
 
 
-async def search_users(query, session, start_time):
+async def search_users(query, session, start_time, count):
     async with session.post(f"https://{FEDI_INSTANCE}/api/users/search", json={
         'limit': 10,
         'query': query
@@ -303,14 +307,14 @@ async def search_users(query, session, start_time):
         embeds = []
 
         for i in resp_body:
-            emb = await lookup_user(i["username"], None if i['host'] is None else i['host'], disable_pinned=True)
+            emb = generate_user_embed(i)
 
             if emb is None:
                 continue
 
-            embeds.extend(emb)
+            embeds.append(emb)
 
-            if len(embeds) >= 3:
+            if len(embeds) >= count:
                 break
 
         end_time = time.time()
@@ -318,35 +322,49 @@ async def search_users(query, session, start_time):
         return (embeds, diff) if len(embeds) > 0 else None
 
 
-async def search_notes(body, session, start_time):
+async def search_notes(query, media_type, session, start_time, count):
+    body = {
+        "query": query,
+        "limit": 25
+    }
+
+    if media_type != "all" and media_type in ["image", "video"]:
+        body["filetype"] = media_type
+
     async with session.post(f"https://{FEDI_INSTANCE}/api/notes/search", json=body) as resp:
         if resp.status != 200:
             return None
 
         resp_body = await resp.json()
 
+        print(f"fetched {len(resp_body)} notes")
+
         embeds = []
 
         for i in resp_body:
             if i["cw"] is not None:
+                print("Skipped a note")
                 continue
 
-            emb = await lookup_note_id(i["id"])
+            emb = generate_note_embed(i)
 
             if emb is None:
+                print(f"Note ID {i['id']} failed to fetch")
                 continue
 
-            embeds.extend(emb)
+            embeds.append(emb)
 
-            if len(embeds) >= 3:
+            if len(embeds) >= count:
+                print(f"breaking out with {len(embeds)} embeds out of {count}")
                 break
 
         end_time = time.time()
         diff = round((end_time - start_time) * 1000)
-        return (embeds, diff) if len(embeds) > 0 else None
+        return (embeds[:count], diff) if len(embeds) > 0 else None
 
 
 compliments_cache = {}
+
 
 def count_cache(compl_type: str, user_id: str):
     if compl_type not in compliments_cache:
@@ -365,6 +383,7 @@ def get_cache_str():
         compl_str = compl_str[:-2] + ", "
 
     return compl_str[:-2]
+
 
 def clear_cache():
     compliments_cache.clear()
@@ -400,13 +419,16 @@ class UserCommands(discord.Cog):
         self.bot.add_view(ComplimentsView(self.bot))
         self.handle_queue.start()
 
-    user_commands = discord.SlashCommandGroup(name='user', description='User commands', integration_types=[discord.IntegrationType.user_install])
+    user_commands = discord.SlashCommandGroup(name='user', description='User commands',
+                                              integration_types=[discord.IntegrationType.user_install])
 
-    @user_commands.command(name='ping', description='Tests connection to Discord', integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name='ping', description='Tests connection to Discord',
+                           integration_types=[discord.IntegrationType.user_install])
     async def ping(self, ctx: discord.ApplicationContext):
         await ctx.respond(f'Pong! {self.bot.latency * 1500} ms', ephemeral=(ctx.user.id != int(OWNER)))
 
-    @user_commands.command(name='message', description='Send message as bot', integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name='message', description='Send message as bot',
+                           integration_types=[discord.IntegrationType.user_install])
     async def message(self, ctx: discord.ApplicationContext, msg: str):
         if ctx.user.id != int(OWNER):
             await ctx.respond("You are not authorized to use this command!", ephemeral=True)
@@ -414,7 +436,8 @@ class UserCommands(discord.Cog):
 
         await ctx.respond(msg)
 
-    @user_commands.command(name="information", description="Print information about the server", integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name="information", description="Print information about the server",
+                           integration_types=[discord.IntegrationType.user_install])
     async def information(self, ctx: discord.ApplicationContext, public: bool = False):
         try:
             if ctx.user.id != int(OWNER):
@@ -425,7 +448,8 @@ class UserCommands(discord.Cog):
             uptime = subprocess.run(["uptime"], capture_output=True, text=True)
             version = "Python %s on %s" % (sys.version, sys.platform)
 
-            await ctx.respond("`" + uname.stdout.strip() + "`\n`" + uptime.stdout.strip() + "`\n`" + version + "`", ephemeral=not public)
+            await ctx.respond("`" + uname.stdout.strip() + "`\n`" + uptime.stdout.strip() + "`\n`" + version + "`",
+                              ephemeral=not public)
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occurred while executing the command.", ephemeral=True)
@@ -438,7 +462,8 @@ class UserCommands(discord.Cog):
 
         await ctx.respond("meow", view=MeowComponent())
 
-    @user_commands.command(name="colon_three", description=":3", integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name="colon_three", description=":3",
+                           integration_types=[discord.IntegrationType.user_install])
     async def colon_three(self, ctx: discord.ApplicationContext):
         if ctx.user.id != int(OWNER):
             await ctx.respond("You are not authorized to use this command!", ephemeral=True)
@@ -454,10 +479,13 @@ class UserCommands(discord.Cog):
 
         await ctx.respond(text, view=SillyComponent(title, label, placeholder))
 
-    fedi_group = discord.SlashCommandGroup(name="fedi", description="Fedi commands", integration_types=[discord.IntegrationType.user_install])
+    fedi_group = discord.SlashCommandGroup(name="fedi", description="Fedi commands",
+                                           integration_types=[discord.IntegrationType.user_install])
 
-    @fedi_group.command(name="lookup", description="Lookup fedi user/post", integration_types=[discord.IntegrationType.user_install])
-    async def lookup_post(self, ctx: discord.ApplicationContext, lookup_str: str, disable_pinned: bool = False):
+    @fedi_group.command(name="lookup", description="Lookup fedi user/post",
+                        integration_types=[discord.IntegrationType.user_install])
+    async def lookup_post(self, ctx: discord.ApplicationContext, lookup_str: str, disable_pinned: bool = False,
+                          pinned_count: int = 3):
         try:
             # Verify right user
             if ctx.user.id != int(OWNER):
@@ -465,7 +493,7 @@ class UserCommands(discord.Cog):
                 return
 
             # Let's attempt generate embed based on lookup function
-            emb = await lookup_by_str(lookup_str, disable_pinned=disable_pinned)
+            emb = await lookup_by_str(lookup_str, disable_pinned=disable_pinned, pinned_count=pinned_count)
 
             if emb is None:
                 await ctx.respond("Failed to lookup!", ephemeral=True)
@@ -476,10 +504,13 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("Error when looking up!", ephemeral=True)
 
-    @fedi_group.command(name="search", description="Search on fedi", integration_types=[discord.IntegrationType.user_install])
+    @fedi_group.command(name="search", description="Search on fedi",
+                        integration_types=[discord.IntegrationType.user_install])
     @discord.option(name="media_type", choices=["image", "video"])
     @discord.option(name="content_type", choices=["notes", "users"])
-    async def search(self, ctx: discord.ApplicationContext, q: str, content_type: str = 'notes', media_type: str = 'all'):
+    @discord.option(name="count", min=1, max=10)
+    async def search(self, ctx: discord.ApplicationContext, q: str, content_type: str = 'notes',
+                     media_type: str = 'all', count: int = 3):
         try:
             # Verify right user
             if ctx.user.id != int(OWNER):
@@ -489,7 +520,9 @@ class UserCommands(discord.Cog):
             await ctx.defer()
 
             # Let's attempt to generate embed based on search function
-            emb = await search(q, content_type, media_type)
+            emb = await search(q, content_type, media_type, count)
+
+            print(f"embed count: {len(emb[0])}")
 
             if emb is None:
                 await ctx.followup.send("Error! No result")
@@ -500,9 +533,11 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.followup.send(f"Error! Server error: {e=}")
 
-    @fedi_group.command(name="note", description="Create a note on fedi", integration_types=[discord.IntegrationType.user_install])
+    @fedi_group.command(name="note", description="Create a note on fedi",
+                        integration_types=[discord.IntegrationType.user_install])
     @discord.option(name="visibility", choices=["public", "home", "followers"])
-    async def note(self, ctx: discord.ApplicationContext, text: str, cw: str = "", visibility: str = "public", public_response: bool = False):
+    async def note(self, ctx: discord.ApplicationContext, text: str, cw: str = "", visibility: str = "public",
+                   public_response: bool = False):
         try:
             # Try create a note
             data = {'text': text, 'visibility': visibility}
@@ -522,12 +557,14 @@ class UserCommands(discord.Cog):
 
                     data = await resp.json()
 
-                    await ctx.respond(f"Note created! https://{FEDI_INSTANCE}/notes/{data['createdNote']['id']}", ephemeral=not public_response)
+                    await ctx.respond(f"Note created! https://{FEDI_INSTANCE}/notes/{data['createdNote']['id']}",
+                                      ephemeral=not public_response)
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("Failed to create note!", ephemeral=True)
 
-    @user_commands.command(name='ban_from_mldchan', description='Ban user from mldchan\'s Discord server', integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name='ban_from_mldchan', description='Ban user from mldchan\'s Discord server',
+                           integration_types=[discord.IntegrationType.user_install])
     async def ban_from_mldchan(self, ctx: discord.ApplicationContext, user: discord.User, reason: str):
         try:
             # Verify right user
@@ -561,7 +598,8 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occured banning this user.", ephemeral=True)
 
-    @user_commands.command(name='add_to_quarantine', description='Add user to quarantine of mldchan', integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name='add_to_quarantine', description='Add user to quarantine of mldchan',
+                           integration_types=[discord.IntegrationType.user_install])
     async def add_to_quarantine(self, ctx: discord.ApplicationContext, user: discord.User):
         try:
             # Verify right user
@@ -579,7 +617,8 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occured quarantining this user.", ephemeral=True)
 
-    @user_commands.command(name='remove_from_quarantine', description='Add user to quarantine of mldchan', integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name='remove_from_quarantine', description='Add user to quarantine of mldchan',
+                           integration_types=[discord.IntegrationType.user_install])
     async def remove_from_quarantine(self, ctx: discord.ApplicationContext, user: discord.User):
         try:
             # Verify right user
@@ -597,7 +636,8 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occured quarantining this user.", ephemeral=True)
 
-    @user_commands.command(name='compliments', description='>//////<', integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name='compliments', description='>//////<',
+                           integration_types=[discord.IntegrationType.user_install])
     async def compliments(self, ctx: discord.ApplicationContext):
         try:
             # Verify right user
@@ -610,7 +650,8 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("Error!", ephemeral=True)
 
-    @user_commands.command(name="uwwwu", description="UwUify text", integration_types=[discord.IntegrationType.user_install])
+    @user_commands.command(name="uwwwu", description="UwUify text",
+                           integration_types=[discord.IntegrationType.user_install])
     async def uwuify_text(self, ctx: discord.ApplicationContext, text: str, private: bool = True):
         try:
             # Verify right user
@@ -631,7 +672,9 @@ class UserCommands(discord.Cog):
 
     @discord.slash_command(name="uwuify", description="UwUify text")
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def uwuify_text_public(self, ctx: discord.ApplicationContext, text: str, use_ai: discord.Option(bool, description="Do you want to use the latest cutting-edge AI to uwuify?", default=True)):
+    async def uwuify_text_public(self, ctx: discord.ApplicationContext, text: str, use_ai: discord.Option(bool,
+                                                                                                          description="Do you want to use the latest cutting-edge AI to uwuify?",
+                                                                                                          default=True)):
         try:
             # Cutting-edge AI check
             if use_ai:
@@ -649,7 +692,9 @@ class UserCommands(discord.Cog):
             await ctx.respond(f"An error occured! {e=}", ephemeral=True)
             sentry_sdk.capture_exception(e)
 
-    @discord.message_command(name='Borrow Meme', description='Repost the message inside of the memes channel of mldchan\'s Discord server', integration_types=[discord.IntegrationType.user_install])
+    @discord.message_command(name='Borrow Meme',
+                             description='Repost the message inside of the memes channel of mldchan\'s Discord server',
+                             integration_types=[discord.IntegrationType.user_install])
     async def borrow_meme(self, ctx: discord.ApplicationContext, message: discord.Message):
         try:
             if ctx.user.id != int(OWNER):
@@ -665,7 +710,8 @@ class UserCommands(discord.Cog):
 
             # Send it
             memes = self.bot.get_guild(int(GUILD)).get_channel(int(CHANNEL_MEMES))
-            await memes.send(content=message.content, files=[discord.File(f"temp/{i.filename}", i.filename) for i in message.attachments])
+            await memes.send(content=message.content,
+                             files=[discord.File(f"temp/{i.filename}", i.filename) for i in message.attachments])
 
             # Delete
             shutil.rmtree("temp")
@@ -700,6 +746,7 @@ class UserCommands(discord.Cog):
         except Exception as e:
             sentry_sdk.capture_exception(e)
 
+
 class ComplimentsView(discord.ui.View):
     def __init__(self, bot: discord.Bot):
         super().__init__(timeout=None)
@@ -715,7 +762,6 @@ class ComplimentsView(discord.ui.View):
             sentry_sdk.capture_exception(e)
             await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
 
-
     @discord.ui.button(label="pretty!", style=discord.ButtonStyle.primary, custom_id="pretty")
     async def pretty(self, button: discord.ui.Button, interaction: discord.Interaction):
         try:
@@ -725,7 +771,6 @@ class ComplimentsView(discord.ui.View):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
-
 
     @discord.ui.button(label="gorgeous!", style=discord.ButtonStyle.primary, custom_id="gorgeous")
     async def gorgeous(self, button: discord.ui.Button, interaction: discord.Interaction):
@@ -737,7 +782,6 @@ class ComplimentsView(discord.ui.View):
             sentry_sdk.capture_exception(e)
             await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
 
-
     @discord.ui.button(label="cool!", style=discord.ButtonStyle.primary, custom_id="cool")
     async def cool(self, button: discord.ui.Button, interaction: discord.Interaction):
         try:
@@ -747,7 +791,6 @@ class ComplimentsView(discord.ui.View):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await interaction.respond("An error occured in mldchan's code :(", ephemeral=True)
-
 
     @discord.ui.button(label="good girl!", style=discord.ButtonStyle.primary, custom_id="good_girl")
     async def good_girl(self, button: discord.ui.Button, interaction: discord.Interaction):
