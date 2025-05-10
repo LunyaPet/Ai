@@ -109,7 +109,7 @@ class AutoYouTubeNotifications(discord.Cog):
                             ]
                         )
 
-                        print(f"Update YouTube post for ID {i['id']}", flush=True)
+
                         asyncio.get_event_loop().create_task(msg.edit(embed=emb))
 
             set_data("yt_notifications", existing_data)

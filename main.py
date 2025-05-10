@@ -1,4 +1,6 @@
+import logging
 import os
+import sys
 
 import discord
 import sentry_sdk
@@ -20,6 +22,8 @@ from cogs.user_commands import UserCommands
 from cogs.verification import Verification
 from constants import DISCORD_TOKEN, SENTRY_DSN
 
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+
 sentry_sdk.init(SENTRY_DSN,
                 integrations=[AioHttpIntegration(), AsyncioIntegration()], traces_sample_rate=1.0,
                 profiles_sample_rate=1.0)
@@ -29,7 +33,7 @@ bot = discord.Bot(intents=discord.Intents.all())
 
 @bot.event
 async def on_ready():
-    print(f"{bot.user.display_name} has connected to Discord!")
+    logging.info(f"{bot.user.display_name} has connected to Discord!")
 
 @bot.event
 async def on_application_command_error(ctx: discord.ApplicationContext, error):

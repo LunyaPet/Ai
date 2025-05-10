@@ -117,7 +117,7 @@ class AutoTikTokNotifications(discord.Cog):
                             ]
                         )
 
-                        print(f"Update TikTok post for ID {i['id']}", flush=True)
+
 
                         asyncio.get_event_loop().create_task(
                             msg.edit(embed=emb)

@@ -189,7 +189,7 @@ async def lookup_note_id(note_id: str, pinned: bool = False) -> list[discord.Emb
             "noteId": note_id
         }) as resp:
             if resp.status != 200:
-                print(f"Failed to fetch {note_id}: Status {resp.status}")
+
                 return None
 
             resp_body = await resp.json()
@@ -208,7 +208,7 @@ async def get_posts_under_hashtags(lookup_str) -> list[discord.Embed] | None:
             'tag': lookup_str[1:]
         }) as resp:
             if resp.status != 200:
-                print("api/hashtags/show status", resp.status)
+
                 return None
 
             body = await resp.json()
@@ -229,7 +229,7 @@ async def get_posts_under_hashtags(lookup_str) -> list[discord.Embed] | None:
             'tag': lookup_str[1:]
         }) as resp:
             if resp.status != 200:
-                print('/api/notes/search-by-tag returned', resp.status)
+
                 return None
 
             body = await resp.json()
@@ -337,25 +337,25 @@ async def search_notes(query, media_type, session, start_time, count):
 
         resp_body = await resp.json()
 
-        print(f"fetched {len(resp_body)} notes")
+
 
         embeds = []
 
         for i in resp_body:
             if i["cw"] is not None:
-                print("Skipped a note")
+
                 continue
 
             emb = generate_note_embed(i)
 
             if emb is None:
-                print(f"Note ID {i['id']} failed to fetch")
+
                 continue
 
             embeds.append(emb)
 
             if len(embeds) >= count:
-                print(f"breaking out with {len(embeds)} embeds out of {count}")
+
                 break
 
         end_time = time.time()
@@ -522,7 +522,7 @@ class UserCommands(discord.Cog):
             # Let's attempt to generate embed based on search function
             emb = await search(q, content_type, media_type, count)
 
-            print(f"embed count: {len(emb[0])}")
+
 
             if emb is None:
                 await ctx.followup.send("Error! No result")

@@ -27,7 +27,7 @@ class Verification(discord.Cog):
 
     @discord.Cog.listener()
     async def on_ready(self):
-        print("✨ Verification Cog is all ready~! ˚₊· ͟͟͞͞➳❥")
+
 
         self.bot.add_view(StartVerificationButton())
         self.bot.add_view(FinishVerificationButton())
