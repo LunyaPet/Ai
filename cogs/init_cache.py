@@ -36,6 +36,23 @@ def compare_embeds(cached: list[dict], embeds: list[discord.Embed]):
     return differences
 
 
+def get_reaction_dict(react: discord.Reaction):
+    if isinstance(react.emoji, discord.PartialEmoji) or isinstance(react.emoji, discord.Emoji):
+        return {
+            "emojiname": react.emoji.name,
+            "emojiid": react.emoji.id,
+            "emojiurl": react.emoji.url,
+            "count": react.count
+        }
+    elif isinstance(react.emoji, str):
+        return {
+            "emoji": react.emoji,
+            "count": react.count
+        }
+
+    raise ValueError(f"Unexpected type {str(type(react))} in get_emoji_dict")
+
+
 class InitCache(discord.Cog):
     def __init__(self, bot: discord.Bot):
         super().__init__()
@@ -88,11 +105,7 @@ class InitCache(discord.Cog):
                 "channelID": message.channel.id,
                 "authorID": message.author.id,
                 "content": message.content,
-                "reactions": [{
-                    "emojiname": i.emoji.name,
-                    "emojiid": i.emoji.id,
-                    "count": i.count
-                } for i in message.reactions],
+                "reactions": [get_reaction_dict(i) for i in message.reactions],
                 "embeds": [i.to_dict() for i in message.embeds],
                 "sentat": message.created_at.isoformat(timespec="minutes")
             })
