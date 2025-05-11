@@ -14,21 +14,24 @@ def compare_embeds(cached: list[dict], embeds: list[discord.Embed]):
     differences: list[tuple[str, str, str]] = []
 
     for (i, v) in enumerate(zip(cached, embeds)):
-        try:
-            if v[0].title != v[1].title:
-                differences.append((f"Embed {i + 1} Title", v[0].title, v[1].title))
-            if v[0].description != v[1].description:
-                differences.append((f"Embed {i + 1} Description", v[0].description, v[1].description))
+        if v[0].title != v[1].title:
+            differences.append((f"Embed {i + 1} Title", v[0].title, v[1].title))
+        if v[0].description != v[1].description:
+            differences.append((f"Embed {i + 1} Description", v[0].description, v[1].description))
+
+        if v[0].author is not None and v[1].author is not None:
             if v[0].author.name != v[1].author.name:
                 differences.append((f"Embed {i + 1} Author", v[0].author.name, v[1].author.name))
 
-            for (j, w) in enumerate(zip(v[0].fields, v[1].fields)):
-                if w[0].name != w[1].name:
-                    differences.append((f"Embed {i + 1} Field {j + 1} Name", w[0].name, w[1].name))
-                if w[0].value != w[1].value:
-                    differences.append((f"Embed {i + 1} Field {j + 1} Value", w[0].value, w[1].value))
-        except Exception as e:
-            sentry_sdk.capture_exception(e)
+        if v[0].footer is not None and v[1].footer is not None:
+            if v[0].footer.text != v[1].footer.text:
+                differences.append((f"Embed {i + 1} Footer", v[0].footer.text, v[1].footer.text))
+
+        for (j, w) in enumerate(zip(v[0].fields, v[1].fields)):
+            if w[0].name != w[1].name:
+                differences.append((f"Embed {i + 1} Field {j + 1} Name", w[0].name, w[1].name))
+            if w[0].value != w[1].value:
+                differences.append((f"Embed {i + 1} Field {j + 1} Value", w[0].value, w[1].value))
 
     return differences
 
@@ -70,7 +73,8 @@ class InitCache(discord.Cog):
             )
 
             self.save()
-            logging.info(f"Created cache for %d messages and %d users", len(self.cached_messages), len(self.cached_users))
+            logging.info(f"Created cache for %d messages and %d users", len(self.cached_messages),
+                         len(self.cached_users))
         except Exception as e:
             sentry_sdk.capture_exception(e)
 
@@ -174,8 +178,11 @@ class InitCache(discord.Cog):
                 title="Message Edited",
                 color=discord.Color.yellow(),
                 description="A message has been edited.",
-                fields=[discord.EmbedField(name=i[0], value=f"{i[1]} -> {i[2]}") for i in changes]
+                fields=[*[discord.EmbedField(name=i[0], value=f"{i[1]} -> {i[2]}") for i in changes],
+                        discord.EmbedField(name="Link", value=f"[Jump]({fetched.jump_url})")]
             ))
+
+            self.update_cached_message(fetched)
         except Exception as e:
             sentry_sdk.capture_exception(e)
 
@@ -197,5 +204,3 @@ class InitCache(discord.Cog):
             ))
         except Exception as e:
             sentry_sdk.capture_exception(e)
-
-
