@@ -25,4 +25,4 @@ class MediaThreads(discord.Cog):
             msg_in_length = msg_in_length[:61] + "..."
 
         thr = await msg.create_thread(name=msg_in_length)
-        await thr.send(content="˚₊· ͟͟͞➳❥ Haii~ I created this thread on your post and all comments on this media should go here~ ˚ ༘♡ ⋆｡˚")
+        await thr.send(content="˚₊· ͟͟͞➳❥ Haii~ I created this thread on your post, comments on this media should go here~ ˚ ༘♡ ⋆｡˚")

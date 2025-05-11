@@ -10,11 +10,11 @@ import time
 import aiohttp
 import discord
 import sentry_sdk
+import yt_dlp.version
 from dateutil.parser import isoparse
-from discord import Interaction
 from discord.ext import tasks, commands
 
-from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN, CHANNEL_MEMES
+from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN, CHANNEL_MEMES, VERSION
 from util.keysmash_generator import keysmash_ai
 from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
 
@@ -218,34 +218,6 @@ class PickerComponent(discord.ui.View):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await interaction.respond("An error occurred", ephemeral=True)
-
-
-class SillyModal(discord.ui.Modal):
-    def __init__(self, title: str, label: str, placeholder: str):
-        super().__init__(title=title)
-
-        self.label = discord.ui.InputText(
-            label=label,
-            placeholder=placeholder,
-            style=discord.InputTextStyle.short
-        )
-
-        self.add_item(self.label)
-
-    async def callback(self, interaction: Interaction):
-        await interaction.respond(f"{interaction.user.mention}: {self.label.value} :3")
-
-
-class SillyComponent(discord.ui.View):
-    def __init__(self, title: str, label: str, placeholder: str):
-        super().__init__()
-        self.title = title
-        self.label = label
-        self.placeholder = placeholder
-
-    @discord.ui.button(label=":3", style=discord.ButtonStyle.primary)
-    async def silly(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await interaction.response.send_modal(SillyModal(self.title, self.label, self.placeholder))
 
 
 def generate_user_embed(resp_body):
@@ -596,9 +568,15 @@ class UserCommands(discord.Cog):
 
             uname = subprocess.run(["uname", "-snrvmpio"], capture_output=True, text=True)
             uptime = subprocess.run(["uptime"], capture_output=True, text=True)
-            version = "Python %s on %s" % (sys.version, sys.platform)
+            version = (f"Python {sys.version} on {sys.platform}\n"
+                      f"py-cord {discord.__version__}\n"
+                      f"sentry_sdk {sentry_sdk.VERSION}\n"
+                      f"yt_dlp {yt_dlp.version.__version__} {yt_dlp.version.CHANNEL}\n")
 
-            await ctx.respond("`" + uname.stdout.strip() + "`\n`" + uptime.stdout.strip() + "`\n`" + version + "`",
+            await ctx.respond(f"`# 愛OS (AiOS) version {VERSION}`\n"
+                              f"`{uname.stdout.strip()}`\n"
+                              f"`{uptime.stdout.strip()}`\n"
+                              f"`{version}`",
                               ephemeral=not public)
         except Exception as e:
             sentry_sdk.capture_exception(e)
@@ -619,14 +597,6 @@ class UserCommands(discord.Cog):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occurred while executing the command.", ephemeral=True)
-
-    @user_commands.command(name="silly", description="silly", integration_types=[discord.IntegrationType.user_install])
-    async def silly(self, ctx: discord.ApplicationContext, text: str, title: str, label: str, placeholder: str = ""):
-        if ctx.user.id != int(OWNER):
-            await ctx.respond("You are not authorized to use this command!", ephemeral=True)
-            return
-
-        await ctx.respond(text, view=SillyComponent(title, label, placeholder))
 
     fedi_group = discord.SlashCommandGroup(name="fedi", description="Fedi commands",
                                            integration_types=[discord.IntegrationType.user_install])
@@ -850,6 +820,19 @@ class UserCommands(discord.Cog):
             shutil.rmtree("temp")
 
             await ctx.respond("Meme reposted in mldchan server successfully!", ephemeral=True)
+        except Exception as e:
+            await ctx.respond("Error!", ephemeral=True)
+            sentry_sdk.capture_exception(e)
+
+    @discord.slash_command(name="version", description="Print bot version")
+    async def version(self, ctx: discord.ApplicationContext):
+        try:
+            await ctx.respond(f"# 愛OS (AiOS) version {VERSION}\n\n"
+                              f"Python {sys.version} on {sys.platform}\n"
+                              f"py-cord {discord.__version__}\n"
+                              f"sentry_sdk {sentry_sdk.VERSION}\n"
+                              f"yt_dlp {yt_dlp.version.__version__} {yt_dlp.version.CHANNEL}\n\n"
+                              f"Licensed under GNU AGPL v3.0. Software's source code is [here](<https://code.mldchan.dev/mld/Ai>)", ephemeral=True)
         except Exception as e:
             await ctx.respond("Error!", ephemeral=True)
             sentry_sdk.capture_exception(e)
