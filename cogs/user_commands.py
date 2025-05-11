@@ -56,7 +56,7 @@ class PickerComponent(discord.ui.View):
             meow_btn.callback = self.meow
             self.add_item(meow_btn)
         elif type == ":3":
-            colon_three_button = discord.ui.Button(style=discord.ButtonStyle.primary, label="Meow",
+            colon_three_button = discord.ui.Button(style=discord.ButtonStyle.primary, label=":3",
                                                    custom_id="picker_colon_three")
             colon_three_button.callback = self.colon_three
             self.add_item(colon_three_button)
@@ -132,7 +132,7 @@ class PickerComponent(discord.ui.View):
 
     async def colon_three(self, interaction: discord.Interaction):
         try:
-            colon_three = '3' * random.randint(4, 12)
+            colon_three = ':' + '3' * random.randint(4, 12)
             await interaction.respond(f"✅ Message sent\n:{colon_three} :3", ephemeral=True)
             dm_cache.append(f"{colon_three} by {interaction.user.mention} :3")
         except Exception as e:
