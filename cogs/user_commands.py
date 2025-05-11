@@ -568,10 +568,10 @@ class UserCommands(discord.Cog):
 
             uname = subprocess.run(["uname", "-snrvmpio"], capture_output=True, text=True)
             uptime = subprocess.run(["uptime"], capture_output=True, text=True)
-            version = (f"`Python {sys.version} on {sys.platform}`\n"
-                      f"`py-cord {discord.__version__}`\n"
-                      f"`sentry_sdk {sentry_sdk.VERSION}`\n"
-                      f"`yt_dlp {yt_dlp.version.__version__} {yt_dlp.version.CHANNEL}`\n")
+            version = (f"Python {sys.version} on {sys.platform}\n"
+                      f"py-cord {discord.__version__}\n"
+                      f"sentry_sdk {sentry_sdk.VERSION}\n"
+                      f"yt_dlp {yt_dlp.version.__version__} {yt_dlp.version.CHANNEL}\n")
 
             await ctx.respond(f"# 愛OS (AiOS) version {VERSION}\n"
                               f"```\n"
