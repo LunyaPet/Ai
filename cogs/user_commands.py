@@ -573,10 +573,12 @@ class UserCommands(discord.Cog):
                       f"`sentry_sdk {sentry_sdk.VERSION}`\n"
                       f"`yt_dlp {yt_dlp.version.__version__} {yt_dlp.version.CHANNEL}`\n")
 
-            await ctx.respond(f"`# 愛OS (AiOS) version {VERSION}`\n"
-                              f"`{uname.stdout.strip()}`\n"
-                              f"`{uptime.stdout.strip()}`\n"
-                              f"{version}",
+            await ctx.respond(f"# 愛OS (AiOS) version {VERSION}\n"
+                              f"```\n"
+                              f"{uname.stdout.strip()}\n"
+                              f"{uptime.stdout.strip()}\n"
+                              f"{version}"
+                              f"```",
                               ephemeral=not public)
         except Exception as e:
             sentry_sdk.capture_exception(e)
