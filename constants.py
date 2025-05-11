@@ -2,7 +2,7 @@ import os
 
 import sentry_sdk
 
-VERSION = "2025.05.24"
+VERSION = "2025.05.25"
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 SENTRY_DSN = os.getenv("SENTRY_DSN")

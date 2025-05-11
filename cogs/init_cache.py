@@ -8,24 +8,27 @@ from constants import GUILD, CHANNEL_MODERATION
 from util.storage import set_data, get_data
 
 
-def compare_embeds(cached, embeds: list[discord.Embed]):
+def compare_embeds(cached: list[dict], embeds: list[discord.Embed]):
     cached: list[discord.Embed] = [discord.Embed.from_dict(i) for i in cached]
 
     differences: list[tuple[str, str, str]] = []
 
     for (i, v) in enumerate(zip(cached, embeds)):
-        if v[0].title != v[1].title:
-            differences.append((f"Embed {i + 1} Title", v[0].title, v[1].title))
-        if v[0].description != v[1].description:
-            differences.append((f"Embed {i + 1} Description", v[0].description, v[1].description))
-        if v[0].author.name != v[1].author.name:
-            differences.append((f"Embed {i + 1} Author", v[0].author.name, v[1].author.name))
+        try:
+            if v[0].title != v[1].title:
+                differences.append((f"Embed {i + 1} Title", v[0].title, v[1].title))
+            if v[0].description != v[1].description:
+                differences.append((f"Embed {i + 1} Description", v[0].description, v[1].description))
+            if v[0].author.name != v[1].author.name:
+                differences.append((f"Embed {i + 1} Author", v[0].author.name, v[1].author.name))
 
-        for (j, w) in enumerate(zip(v[0].fields, v[1].fields)):
-            if w[0].name != w[1].name:
-                differences.append((f"Embed {i + 1} Field {j + 1} Name", w[0].name, w[1].name))
-            if w[0].value != w[1].value:
-                differences.append((f"Embed {i + 1} Field {j + 1} Value", w[0].value, w[1].value))
+            for (j, w) in enumerate(zip(v[0].fields, v[1].fields)):
+                if w[0].name != w[1].name:
+                    differences.append((f"Embed {i + 1} Field {j + 1} Name", w[0].name, w[1].name))
+                if w[0].value != w[1].value:
+                    differences.append((f"Embed {i + 1} Field {j + 1} Value", w[0].value, w[1].value))
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
 
     return differences
 
@@ -175,4 +178,24 @@ class InitCache(discord.Cog):
             ))
         except Exception as e:
             sentry_sdk.capture_exception(e)
+
+    @discord.Cog.listener()
+    async def on_raw_message_delete(self, payload: discord.RawMessageDeleteEvent):
+        try:
+            cached = self.get_cached_message(payload.message_id)
+
+            if not cached:
+                return
+
+            log_channel = self.bot.get_channel(int(CHANNEL_MODERATION))
+
+            await log_channel.send(embed=discord.Embed(
+                title="Message Deleted",
+                color=discord.Color.red(),
+                description="A message has been deleted.\n\n"
+                            f"{cached['content']}"
+            ))
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+
 
