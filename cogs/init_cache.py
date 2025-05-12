@@ -6,6 +6,7 @@ import sentry_sdk
 
 from constants import GUILD, CHANNEL_MODERATION
 from util.storage import set_data, get_data
+from discord.ext import tasks
 
 
 def compare_embeds(cached: list[dict], embeds: list[discord.Embed]):
@@ -62,6 +63,11 @@ class InitCache(discord.Cog):
         self.cached_channels: list[dict] = []
         self.cached_emojis: list[dict] = []
         self.load()
+        self.saving_task.start()
+
+    @tasks.loop(minutes=30)
+    async def saving_task(self):
+        self.save()
 
     async def init_channel(self, channel: discord.TextChannel):
         try:
@@ -110,12 +116,17 @@ class InitCache(discord.Cog):
                 "sentat": message.created_at.isoformat(timespec="minutes")
             })
 
+        # Remove user if missing information
+        if "bot" not in [i for i in self.cached_users if i["id"] == message.author.id][0]:
+            self.cached_users = [i for i in self.cached_users if i["id"] != message.author.id]
+
         if not any(i['id'] == message.author.id for i in self.cached_users):
             self.cached_users.append({
                 "id": message.author.id,
                 "username": message.author.name,
                 "displayname": message.author.display_name,
-                "avatar": message.author.display_avatar.url
+                "avatar": message.author.display_avatar.url,
+                "bot": message.author.bot
             })
 
         if not any(i['id'] == message.channel.id for i in self.cached_channels):
@@ -134,6 +145,10 @@ class InitCache(discord.Cog):
 
     def get_cached_message(self, message_id: int):
         a = [i for i in self.cached_messages if i['id'] == message_id]
+        return None if len(a) == 0 else a[0]
+
+    def get_cached_user(self, user_id: int):
+        a = [i for i in self.cached_users if i['id'] == user_id]
         return None if len(a) == 0 else a[0]
 
     def save(self):
@@ -175,6 +190,13 @@ class InitCache(discord.Cog):
             cached = self.get_cached_message(payload.message_id)
             if not cached:
                 return
+            cached_author = self.get_cached_user(cached["authorID"])
+            if not cached_author:
+                return
+
+            if "bot" in cached_author and cached_author["bot"]:
+                return
+
             fetched = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
 
             if cached["content"] != fetched.content:
@@ -207,13 +229,22 @@ class InitCache(discord.Cog):
             if not cached:
                 return
 
+            cached_author = self.get_cached_user(cached["authorID"])
+            if not cached_author:
+                return
+            if "bot" in cached_author and cached_author["bot"]:
+                return
+
             log_channel = self.bot.get_channel(int(CHANNEL_MODERATION))
 
             await log_channel.send(embed=discord.Embed(
                 title="Message Deleted",
                 color=discord.Color.red(),
                 description="A message has been deleted.\n\n"
-                            f"{cached['content']}"
+                            f"{cached['content']}",
+                fields=[
+                    discord.EmbedField(name="Link", value=f"[Jump](https://discord.com/channels/{payload.guild_id}/{payload.channel_id}/{payload.message_id})")
+                ]
             ))
         except Exception as e:
             sentry_sdk.capture_exception(e)
