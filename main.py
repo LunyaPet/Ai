@@ -16,6 +16,7 @@ from cogs.general_cleaner import GeneralCleaner
 from cogs.init_cache import InitCache
 from cogs.media_threads import MediaThreads
 from cogs.message_reporting import MessageReporting
+from cogs.plurality import Plurality
 from cogs.statistics import ServerStatistics
 from cogs.user_commands import UserCommands
 from cogs.verification import Verification
@@ -84,6 +85,7 @@ bot.add_cog(GeneralCleaner(bot))
 bot.add_cog(MediaThreads(bot))
 bot.add_cog(FunnyAutoResponse(bot))
 bot.add_cog(InitCache(bot))
+bot.add_cog(Plurality(bot))
 bot.add_cog(ServerStatistics(bot))
 
 bot.run(DISCORD_TOKEN)
