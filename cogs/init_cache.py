@@ -117,7 +117,8 @@ class InitCache(discord.Cog):
             })
 
         # Remove user if missing information
-        if "bot" not in [i for i in self.cached_users if i["id"] == message.author.id][0]:
+        b = [i for i in self.cached_users if i["id"] == message.author.id]
+        if len(b) > 0 and "bot" not in b[0]:
             self.cached_users = [i for i in self.cached_users if i["id"] != message.author.id]
 
         if not any(i['id'] == message.author.id for i in self.cached_users):
