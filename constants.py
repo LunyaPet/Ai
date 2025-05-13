@@ -51,6 +51,9 @@ FEDI_TOKEN = os.getenv("FEDI_TOKEN")
 YT_LINK = os.getenv("YT_LINK")
 TT_LINK = os.getenv("TT_LINK")
 
+WEB_SERVER_URL = os.getenv("WEB_SERVER_URL")
+WEB_SERVER_CODE = os.getenv("WEB_SERVER_CODE")
+
 def validate_values(l: dict[str, str | None]):
     for k, v in l.items():
         if v is None:
@@ -92,5 +95,7 @@ validate_values({
     'FEDI_USER_ID': FEDI_USER_ID,
     'FEDI_TOKEN': FEDI_TOKEN,
     'YT_LINK': YT_LINK,
-    'TT_LINK': TT_LINK
+    'TT_LINK': TT_LINK,
+    'WEB_SERVER_URL': WEB_SERVER_URL,
+    'WEB_SERVER_CODE': WEB_SERVER_CODE
 })
