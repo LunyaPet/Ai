@@ -8,6 +8,7 @@ RUN pip3 install -r requirements.txt
 
 COPY main.py .
 COPY constants.py .
+COPY rom/ rom/.
 COPY cogs/ cogs/.
 COPY util/ util/.
 
