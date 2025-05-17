@@ -76,6 +76,9 @@ class FunnyAutoResponse(discord.Cog):
             if message.guild.id != int(GUILD):
                 return
 
+            if "so true" in message.content or "so real" in message.content:
+                await message.reply(file=discord.File("rom/sotruebestie.gif"))
+
             message_reply = " ".join([
                 handle_meow(message),
                 handle_colon_three(message),
