@@ -61,7 +61,7 @@ class AutoYouTubeNotifications(discord.Cog):
 
         self.check_latest_videos.start()
 
-    @tasks.loop(minutes=5)
+    @tasks.loop(hours=1)
     async def check_latest_videos(self):
 
         try:
