@@ -142,7 +142,7 @@ class PickerComponent(discord.ui.View):
     async def meow_fedi(self, interaction: discord.Interaction):
         try:
             meow = generate_meow()
-            await interaction.respond(f"✅ Message sent\n{meow} :3")
+            await interaction.respond(f"✅ Message sent\n{meow} :3", ephemeral=True)
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(f"https://{FEDI_INSTANCE}/api/notes/create", json={
