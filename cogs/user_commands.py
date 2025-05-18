@@ -14,7 +14,7 @@ import yt_dlp.version
 from dateutil.parser import isoparse
 from discord.ext import tasks, commands
 
-from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN, CHANNEL_MEMES, VERSION
+from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN, CHANNEL_MEMES, VERSION, FEDI_USER_ID
 from util.keysmash_generator import keysmash_ai
 from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
 
@@ -55,10 +55,19 @@ class PickerComponent(discord.ui.View):
             meow_btn = discord.ui.Button(style=discord.ButtonStyle.primary, label="Meow", custom_id="picker_meow")
             meow_btn.callback = self.meow
             self.add_item(meow_btn)
+        elif type == "fedi meow":
+            meow_btn = discord.ui.Button(style=discord.ButtonStyle.primary, label="Meow", custom_id="picker_meow_fedi")
+            meow_btn.callback = self.meow_fedi
+            self.add_item(meow_btn)
         elif type == ":3":
             colon_three_button = discord.ui.Button(style=discord.ButtonStyle.primary, label=":3",
                                                    custom_id="picker_colon_three")
             colon_three_button.callback = self.colon_three
+            self.add_item(colon_three_button)
+        elif type == "fedi :3":
+            colon_three_button = discord.ui.Button(style=discord.ButtonStyle.primary, label=":3",
+                                                   custom_id="picker_colon_three_fedi")
+            colon_three_button.callback = self.colon_three_fedi
             self.add_item(colon_three_button)
         elif type == "compliments":
             # cute
@@ -130,11 +139,56 @@ class PickerComponent(discord.ui.View):
             sentry_sdk.capture_exception(e)
             await interaction.respond("An error occurred", ephemeral=True)
 
+    async def meow_fedi(self, interaction: discord.Interaction):
+        try:
+            meow = generate_meow()
+            await interaction.respond(f"✅ Message sent\n{meow} :3")
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(f"https://{FEDI_INSTANCE}/api/notes/create", json={
+                    'text': f'@mld {meow} :3',
+                    'visibility': 'specified',
+                    'visibleUserIds': [
+                        FEDI_USER_ID
+                    ]
+                }, headers={
+                    'Authorization': f'Bearer {FEDI_TOKEN}'
+                }) as req:
+
+                    if not req.ok:
+                        message = await req.text()
+                        raise ValueError(f"Fedi Meow failed with code {req.status}: {req.reason} {message}")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
     async def colon_three(self, interaction: discord.Interaction):
         try:
             colon_three = ':' + '3' * random.randint(4, 12)
             await interaction.respond(f"✅ Message sent\n:{colon_three} :3", ephemeral=True)
             dm_cache.append(f"{colon_three} by {interaction.user.mention} :3")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
+    async def colon_three_fedi(self, interaction: discord.Interaction):
+        try:
+            colon_three = ':' + '3' * random.randint(4, 12)
+            await interaction.respond(f"✅ Message sent\n:{colon_three} :3", ephemeral=True)
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(f"https://{FEDI_INSTANCE}/api/notes/create", json={
+                    'text': f'@mld {colon_three} :3',
+                    'visibility': 'specified',
+                    'visibleUserIds': [
+                        FEDI_USER_ID
+                    ]
+                }, headers={
+                    'Authorization': f'Bearer {FEDI_TOKEN}'
+                }) as req:
+                    if not req.ok:
+                        message = await req.text()
+                        raise ValueError(f"Fedi Meow failed with code {req.status}: {req.reason} {message}")
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await interaction.respond("An error occurred", ephemeral=True)
@@ -532,7 +586,9 @@ class UserCommands(discord.Cog):
     @discord.Cog.listener()
     async def on_ready(self):
         self.bot.add_view(PickerComponent("meow"))
+        self.bot.add_view(PickerComponent("fedi meow"))
         self.bot.add_view(PickerComponent(":3"))
+        self.bot.add_view(PickerComponent("fedi :3"))
         self.bot.add_view(PickerComponent("compliments"))
         self.bot.add_view(PickerComponent("meowat"))
         self.bot.add_view(PickerComponent("purrr"))
@@ -588,7 +644,7 @@ class UserCommands(discord.Cog):
     async def picker(self, ctx: discord.ApplicationContext,
                      message: str,
                      type: discord.Option(str,
-                                          choices=["meow", ":3", "compliments", "meowat", "purrr", "girlkiss", "boop",
+                                          choices=["meow", "fedi meow", ":3", "fedi :3", "compliments", "meowat", "purrr", "girlkiss", "boop",
                                                    "paws"])):
         try:
             if ctx.user.id != int(OWNER):
