@@ -134,7 +134,7 @@ class PickerComponent(discord.ui.View):
         try:
             meow = generate_meow()
             await interaction.respond(f"✅ Message sent\n{meow} :3", ephemeral=True)
-            dm_cache.append(f"{meow} by {interaction.user.mention} :3", ephemeral=True)
+            dm_cache.append(f"{meow} by {interaction.user.mention} :3")
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await interaction.respond("An error occurred", ephemeral=True)
