@@ -146,7 +146,7 @@ class PickerComponent(discord.ui.View):
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(f"https://{FEDI_INSTANCE}/api/notes/create", json={
-                    'text': f'@mld {meow} :3',
+                    'text': f'@mld {meow} by {interaction.user.display_name} :3',
                     'visibility': 'specified',
                     'visibleUserIds': [
                         FEDI_USER_ID
@@ -174,11 +174,11 @@ class PickerComponent(discord.ui.View):
     async def colon_three_fedi(self, interaction: discord.Interaction):
         try:
             colon_three = ':' + '3' * random.randint(4, 12)
-            await interaction.respond(f"✅ Message sent\n:{colon_three} :3", ephemeral=True)
+            await interaction.respond(f"✅ Message sent\n{colon_three} :3", ephemeral=True)
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(f"https://{FEDI_INSTANCE}/api/notes/create", json={
-                    'text': f'@mld {colon_three} :3',
+                    'text': f'@mld {colon_three} by {interaction.user.display_name} :3',
                     'visibility': 'specified',
                     'visibleUserIds': [
                         FEDI_USER_ID
