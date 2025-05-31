@@ -1,3 +1,4 @@
+import datetime
 import os.path
 import random
 import re
@@ -9,6 +10,7 @@ import time
 
 import aiohttp
 import discord
+import pytz
 import sentry_sdk
 import yt_dlp.version
 from dateutil.parser import isoparse
@@ -46,6 +48,27 @@ def generate_fluster():
                                                                                                                       10) + "<"
     else:
         raise ValueError("Invalid fluster type")
+
+class RefreshTimeView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="refresh", style=discord.ButtonStyle.secondary, custom_id="refresh_time")
+    async def refresh_btn(self, button: discord.ui.Button, interaction: discord.Interaction):
+        try:
+            utc = pytz.timezone("UTC")
+            lunya_tz = pytz.timezone("Europe/Prague")
+
+            utc_time = datetime.datetime.now(utc)
+            lunya_time = datetime.datetime.now(lunya_tz)
+
+            await interaction.edit(content=f"# Time\n"
+                                           f"Current time for Lunya: {lunya_time.strftime('%a %d %b %Y, %H:%M:%S %Z (%z)')}\n"
+                                           f"Server clock: {utc_time.strftime('%a %d %b %Y, %H:%M:%S %Z (%z)')}\n"
+                                           f"Your time: <t:{int(utc_time.timestamp())}:F>")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.response.send_message(f"error :(", ephemeral=True)
 
 class ReadReceiptComponent(discord.ui.View):
     def __init__(self):
@@ -626,6 +649,7 @@ class UserCommands(discord.Cog):
         self.bot.add_view(PickerComponent("boop"))
         self.bot.add_view(PickerComponent("paws"))
         self.bot.add_view(ReadReceiptComponent())
+        self.bot.add_view(RefreshTimeView())
         self.handle_queue.start()
 
     user_commands = discord.SlashCommandGroup(name='user', description='User commands',
@@ -698,6 +722,27 @@ class UserCommands(discord.Cog):
                 return
 
             await ctx.respond(message, view=ReadReceiptComponent())
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await ctx.respond("An error occurred while executing the command.", ephemeral=True)
+
+    @user_commands.command(name="time", description="Get time for Lunya :3")
+    async def time(self, ctx: discord.ApplicationContext):
+        try:
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+                return
+
+            utc = pytz.timezone("UTC")
+            lunya_tz = pytz.timezone("Europe/Prague")
+
+            utc_time = datetime.datetime.now(utc)
+            lunya_time = datetime.datetime.now(lunya_tz)
+
+            await ctx.respond(f"# Time\n"
+                              f"Current time for Lunya: {lunya_time.strftime('%a %d %b %Y, %H:%M:%S %Z (%z)')}\n"
+                              f"Server clock: {utc_time.strftime('%a %d %b %Y, %H:%M:%S %Z (%z)')}\n"
+                              f"Your time: <t:{int(utc_time.timestamp())}:F>", view=RefreshTimeView())
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occurred while executing the command.", ephemeral=True)
