@@ -17,6 +17,7 @@ from discord.ext import tasks, commands
 from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN, CHANNEL_MEMES, VERSION, FEDI_USER_ID
 from util.keysmash_generator import keysmash_ai
 from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
+from util.storage import get_data, set_data
 
 dm_cache = []
 
@@ -45,6 +46,35 @@ def generate_fluster():
                                                                                                                       10) + "<"
     else:
         raise ValueError("Invalid fluster type")
+
+class ReadReceiptComponent(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Mark as read", style=discord.ButtonStyle.primary, custom_id="read_receipt")
+    async def mark_as_read(self, button: discord.ui.Button, interaction: discord.Interaction):
+        try:
+            data = get_data(f"read_receipt/{interaction.message.id}")
+
+            if 'readUsers' not in data:
+                data['readUsers'] = []
+
+            if 'message' not in data:
+                data['message'] = interaction.message.content
+
+            if str(interaction.user.id) in data['readUsers']:
+                await interaction.respond("already marked as read! thank you <3", ephemeral=True)
+                return
+
+            data['readUsers'].append(str(interaction.user.id))
+
+            await interaction.edit(content=f'{data["message"]}\n*Read by {", ".join([f"<@{i}>" for i in data["readUsers"]])}*')
+            set_data(f"read_receipt/{interaction.message.id}", data)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("error :(\n"
+                                      "-# this error was automatically reported", ephemeral=True)
+
 
 
 class PickerComponent(discord.ui.View):
@@ -595,6 +625,7 @@ class UserCommands(discord.Cog):
         self.bot.add_view(PickerComponent("girlkiss"))
         self.bot.add_view(PickerComponent("boop"))
         self.bot.add_view(PickerComponent("paws"))
+        self.bot.add_view(ReadReceiptComponent())
         self.handle_queue.start()
 
     user_commands = discord.SlashCommandGroup(name='user', description='User commands',
@@ -658,6 +689,18 @@ class UserCommands(discord.Cog):
 
     fedi_group = discord.SlashCommandGroup(name="fedi", description="Fedi commands",
                                            integration_types=[discord.IntegrationType.user_install])
+
+    @user_commands.command(name="read_receipt", description="Send read receipt message which allows well accepting a read receipt")
+    async def read_receipt(self, ctx: discord.ApplicationContext, message: str):
+        try:
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+                return
+
+            await ctx.respond(message, view=ReadReceiptComponent())
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await ctx.respond("An error occurred while executing the command.", ephemeral=True)
 
     @fedi_group.command(name="lookup", description="Lookup fedi user/post",
                         integration_types=[discord.IntegrationType.user_install])
