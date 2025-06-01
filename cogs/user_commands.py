@@ -11,12 +11,15 @@ import time
 import aiohttp
 import discord
 import pytz
+import requests
 import sentry_sdk
 import yt_dlp.version
 from dateutil.parser import isoparse
+from discord import Interaction
 from discord.ext import tasks, commands
 
-from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN, CHANNEL_MEMES, VERSION, FEDI_USER_ID
+from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN, CHANNEL_MEMES, VERSION, FEDI_USER_ID, \
+    FORGEJO_INSTANCE, FORGEJO_DEFAULT_USER, FORGEJO_TOKEN
 from util.keysmash_generator import keysmash_ai
 from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
 from util.storage import get_data, set_data
@@ -326,6 +329,53 @@ class PickerComponent(discord.ui.View):
             sentry_sdk.capture_exception(e)
             await interaction.respond("An error occurred", ephemeral=True)
 
+
+class ForgejoCreateIssueModal(discord.ui.Modal):
+    def __init__(self, user: str, repo: str):
+        super().__init__(title=f"create issue on {user}/{repo}")
+
+        self.user = user
+        self.repo = repo
+
+        self.field_title = discord.ui.InputText(label="title", placeholder="[feat] meow uwu :3")
+        self.add_item(self.field_title)
+
+        self.field_body = discord.ui.InputText(label="body", placeholder="- [ ] add meowing\n"
+                                                                         "- [ ] add woofing...", style=discord.InputTextStyle.paragraph)
+        self.add_item(self.field_body)
+
+    async def callback(self, interaction: Interaction):
+        try:
+            res = requests.post(f"https://{FORGEJO_INSTANCE}/api/v1/repos/{self.user}/{self.repo}/issues", headers={
+                'Authorization': f"Bearer {FORGEJO_TOKEN}",
+                'Content-Type': 'application/json'
+            }, json={
+                'title': self.field_title.value,
+                'body': self.field_body.value
+            })
+
+            res.raise_for_status()
+            res_b = res.json()
+
+            await interaction.respond("Issue created successfully!\n"
+                                      f"https://{FORGEJO_INSTANCE}/{self.user}/{self.repo}/issues/{res_b['number']}", ephemeral=True)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("an error occurred", ephemeral=True)
+
+class ForgejoCreateIssueButton(discord.ui.View):
+    def __init__(self, user: str, repo: str):
+        super().__init__(timeout=3600, disable_on_timeout=True)
+        self.user = user
+        self.repo = repo
+
+    @discord.ui.button(label="create issue", style=discord.ButtonStyle.primary)
+    async def create_issue_modal(self, button: discord.ui.Button, interaction: discord.Interaction):
+        try:
+            await interaction.response.send_modal(ForgejoCreateIssueModal(user=self.user, repo=self.repo))
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("an error occurred", ephemeral=True)
 
 def generate_user_embed(resp_body):
     host = FEDI_INSTANCE if resp_body["host"] is None else resp_body["host"]
@@ -711,8 +761,6 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occurred while executing the command.", ephemeral=True)
 
-    fedi_group = discord.SlashCommandGroup(name="fedi", description="Fedi commands",
-                                           integration_types=[discord.IntegrationType.user_install])
 
     @user_commands.command(name="read_receipt", description="Send read receipt message which allows well accepting a read receipt")
     async def read_receipt(self, ctx: discord.ApplicationContext, message: str):
@@ -746,6 +794,9 @@ class UserCommands(discord.Cog):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occurred while executing the command.", ephemeral=True)
+
+    fedi_group = discord.SlashCommandGroup(name="fedi", description="Fedi commands",
+                                           integration_types=[discord.IntegrationType.user_install])
 
     @fedi_group.command(name="lookup", description="Lookup fedi user/post",
                         integration_types=[discord.IntegrationType.user_install])
@@ -825,6 +876,43 @@ class UserCommands(discord.Cog):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("Failed to create note!", ephemeral=True)
+
+    forgejo_commands = discord.SlashCommandGroup(name="forgejo", description=f"Forgejo ({FORGEJO_INSTANCE}) related commands",
+                                           integration_types=[discord.IntegrationType.user_install])
+
+    @forgejo_commands.command(name="new_issue", description="Create an issue on a project", integration_types=[discord.IntegrationType.user_install])
+    async def forgejo_new_issue(self, ctx: discord.ApplicationContext, project: str, title: str, body: str, user: str = FORGEJO_DEFAULT_USER):
+        try:
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+
+            res = requests.post(f"https://{FORGEJO_INSTANCE}/api/v1/repos/{user}/{project}/issues", headers={
+                'Authorization': f"Bearer {FORGEJO_TOKEN}",
+                'Content-Type': 'application/json'
+            }, json={
+                'title': title,
+                'body': body
+            })
+
+            res.raise_for_status()
+            res_b = res.json()
+
+            await ctx.respond("Issue created successfully!\n"
+                              f"https://{FORGEJO_INSTANCE}/{user}/{project}/issues/{res_b['number']}", ephemeral=True)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await ctx.respond("Failed to create new issue!", ephemeral=True)
+
+    @forgejo_commands.command(name="new_issue_button", description="Send a button allow submitting of issues to repository", integration_types=[discord.IntegrationType.user_install])
+    async def forgejo_new_issue(self, ctx: discord.ApplicationContext, project: str, message: str, user: str = FORGEJO_DEFAULT_USER):
+        try:
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+
+            await ctx.respond(message, view=ForgejoCreateIssueButton(user, project))
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await ctx.respond("Failed to create new issue!", ephemeral=True)
 
     @user_commands.command(name='ban_from_mldchan', description='Ban user from mldchan\'s Discord server',
                            integration_types=[discord.IntegrationType.user_install])
