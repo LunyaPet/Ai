@@ -337,6 +337,25 @@ class PickerComponent(discord.ui.View):
     async def click(self, interaction: discord.Interaction):
         try:
             await interaction.respond("✅ *click click* at mldchan", ephemeral=True)
+
+            click_data = get_data("clicker")
+            # total
+            if 'total' not in click_data:
+                click_data['total'] = 0
+
+            click_data['total'] += 1
+
+            # per user
+            if 'from' not in click_data:
+                click_data['from'] = {}
+
+            if str(interaction.user.id) not in click_data['from']:
+                click_data['from'][str(interaction.user.id)] = 0
+
+            click_data['from'][str(interaction.user.id)] += 1
+
+            set_data("clicker", click_data)
+
             dm_cache.append(f"{interaction.user.mention} clicked at you :3")
         except Exception as e:
             sentry_sdk.capture_exception(e)
@@ -775,6 +794,32 @@ class UserCommands(discord.Cog):
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occurred while executing the command.", ephemeral=True)
 
+    @user_commands.command(name="clicker_counts", description="how many times did i click at you?")
+    async def clicker_counts(self, ctx: discord.ApplicationContext, from_user: discord.User = None, public: bool = False):
+        try:
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+                return
+
+            click_data = get_data("clicker")
+
+            if 'total' not in click_data:
+                click_data['total'] = 0
+            if 'from' not in click_data:
+                click_data['from'] = {}
+
+            if from_user is None:
+                await ctx.respond(f"a total of {click_data['total']} clicks has been done at you :3", ephemeral=not public)
+                return
+
+            if str(from_user.id) in click_data['from']:
+                await ctx.respond(f"a total of {click_data['total']} clicks and {click_data['from'][str(from_user.id)]} clicks specifically from {from_user.mention} have been performed at you :3", ephemeral=not public)
+            else:
+                await ctx.respond(f"a total of {click_data['total']} clicks has been done at you :3\n"
+                                  f"-# from user not found in db", ephemeral=not public)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await ctx.respond("an error occurred while executing the command.", ephemeral=True)
 
     @user_commands.command(name="read_receipt", description="Send read receipt message which allows well accepting a read receipt")
     async def read_receipt(self, ctx: discord.ApplicationContext, message: str):
