@@ -183,6 +183,11 @@ class PickerComponent(discord.ui.View):
                                                    custom_id="picker_paws")
             paws_at_you_button.callback = self.paws_at_you
             self.add_item(paws_at_you_button)
+        elif type == "click":
+            self.click_button = discord.ui.Button(style=discord.ButtonStyle.primary, label="*click click*",
+                                             custom_id="picker_click")
+            self.click_button.callback = self.click
+            self.add_item(self.click_button)
         else:
             raise ValueError("Invalid type")
 
@@ -325,6 +330,14 @@ class PickerComponent(discord.ui.View):
         try:
             await interaction.respond("✅ *paws at mldchan*", ephemeral=True)
             dm_cache.append(f"{interaction.user.mention} *paws at you* :3")
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await interaction.respond("An error occurred", ephemeral=True)
+
+    async def click(self, interaction: discord.Interaction):
+        try:
+            await interaction.respond("✅ *click click* at mldchan", ephemeral=True)
+            dm_cache.append(f"{interaction.user.mention} clicked at you :3")
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await interaction.respond("An error occurred", ephemeral=True)
@@ -698,6 +711,7 @@ class UserCommands(discord.Cog):
         self.bot.add_view(PickerComponent("girlkiss"))
         self.bot.add_view(PickerComponent("boop"))
         self.bot.add_view(PickerComponent("paws"))
+        self.bot.add_view(PickerComponent("click"))
         self.bot.add_view(ReadReceiptComponent())
         self.bot.add_view(RefreshTimeView())
         self.handle_queue.start()
@@ -750,7 +764,7 @@ class UserCommands(discord.Cog):
                      message: str,
                      type: discord.Option(str,
                                           choices=["meow", "fedi meow", ":3", "fedi :3", "compliments", "meowat", "purrr", "girlkiss", "boop",
-                                                   "paws"])):
+                                                   "paws", "click"])):
         try:
             if ctx.user.id != int(OWNER):
                 await ctx.respond("You are not authorized to use this command!", ephemeral=True)
@@ -1071,7 +1085,7 @@ class UserCommands(discord.Cog):
             await ctx.respond("Error!", ephemeral=True)
             sentry_sdk.capture_exception(e)
 
-    @tasks.loop(seconds=20)
+    @tasks.loop(seconds=5)
     async def handle_queue(self):
         try:
             if len(dm_cache) == 0:
