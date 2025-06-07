@@ -1,12 +1,9 @@
-import asyncio
-import os
-
 import discord
 import sentry_sdk
 
-from cogs.verification import StartVerificationButton
-from util.storage import get_data, set_data
 from constants import OWNER, GUILD
+from util.storage import get_data, set_data
+
 
 class DevCommands(discord.Cog):
     def __init__(self, bot: discord.Bot):
@@ -42,19 +39,6 @@ class DevCommands(discord.Cog):
     @dev_group.command(name="debug")
     async def debug_cmd(self, ctx: discord.ApplicationContext):
         await ctx.respond("Debug command", ephemeral=True)
-
-    @dev_group.command(name="send_verify_message")
-    async def send_verify_cmd(self, ctx: discord.ApplicationContext):
-        try:
-            if ctx.user.id != int(OWNER):
-                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
-                return
-
-            await asyncio.gather(ctx.channel.send(
-                "# Verify\nIn order to access the rest of this server, you must verify. Please click the \"start verify\" button in order to begin!",
-                view=StartVerificationButton()), ctx.respond("Sent", ephemeral=True))
-        except Exception as e:
-            sentry_sdk.capture_exception(e)
 
     @dev_group.command(name="set_status")
     @discord.option(name="mode", description="The mode to set the status to", type=str, choices=["watching", "streaming", "playing", "competing", "listening"])

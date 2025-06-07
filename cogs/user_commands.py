@@ -21,7 +21,6 @@ from discord.ext import tasks, commands
 from constants import OWNER, FEDI_INSTANCE, GUILD, CHANNEL_MODERATION, FEDI_TOKEN, CHANNEL_MEMES, VERSION, FEDI_USER_ID, \
     FORGEJO_INSTANCE, FORGEJO_DEFAULT_USER, FORGEJO_TOKEN
 from util.keysmash_generator import keysmash_ai
-from util.quarantine import add_member_to_quarantine, is_member_in_quarantine, delete_member_from_quarantine
 from util.storage import get_data, set_data
 
 dm_cache = []
@@ -1007,44 +1006,6 @@ class UserCommands(discord.Cog):
         except Exception as e:
             sentry_sdk.capture_exception(e)
             await ctx.respond("An error occured banning this user.", ephemeral=True)
-
-    @user_commands.command(name='add_to_quarantine', description='Add user to quarantine of mldchan',
-                           integration_types=[discord.IntegrationType.user_install])
-    async def add_to_quarantine(self, ctx: discord.ApplicationContext, user: discord.User):
-        try:
-            # Verify right user
-            if ctx.user.id != int(OWNER):
-                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
-                return
-
-            if is_member_in_quarantine(user.id):
-                await ctx.respond("This user is already quarantined!", ephemeral=True)
-                return
-
-            add_member_to_quarantine(user.id)
-            await ctx.respond("Member was added to quarantine successfully!", ephemeral=True)
-        except Exception as e:
-            sentry_sdk.capture_exception(e)
-            await ctx.respond("An error occured quarantining this user.", ephemeral=True)
-
-    @user_commands.command(name='remove_from_quarantine', description='Add user to quarantine of mldchan',
-                           integration_types=[discord.IntegrationType.user_install])
-    async def remove_from_quarantine(self, ctx: discord.ApplicationContext, user: discord.User):
-        try:
-            # Verify right user
-            if ctx.user.id != int(OWNER):
-                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
-                return
-
-            if not is_member_in_quarantine(user.id):
-                await ctx.respond("This user is not quarantined!", ephemeral=True)
-                return
-
-            delete_member_from_quarantine(user.id)
-            await ctx.respond("Member was removed from quarantine successfully!", ephemeral=True)
-        except Exception as e:
-            sentry_sdk.capture_exception(e)
-            await ctx.respond("An error occured quarantining this user.", ephemeral=True)
 
     @user_commands.command(name="uwwwu", description="UwUify text",
                            integration_types=[discord.IntegrationType.user_install])
