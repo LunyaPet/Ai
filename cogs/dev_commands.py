@@ -1,6 +1,9 @@
+from sys import intern
+
 import discord
 import sentry_sdk
 
+from cogs.nsfw_verification import NsfwView, NsfwRolePicker
 from constants import OWNER, GUILD
 from util.storage import get_data, set_data
 
@@ -72,3 +75,16 @@ class DevCommands(discord.Cog):
             await ctx.respond(f"Status set to {mode}: {status}!", ephemeral=True)
         except Exception as e:
             sentry_sdk.capture_exception(e)
+
+    @dev_group.command(name="drop_nsfw_role_picker")
+    async def drop_nsfw_role_picker(self, ctx: discord.ApplicationContext):
+        try:
+            if ctx.user.id != int(OWNER):
+                await ctx.respond("You are not authorized to use this command!", ephemeral=True)
+                return
+
+            await ctx.channel.send("use the button below to get access to nsfw channels", view=NsfwRolePicker())
+            await ctx.respond("sent", ephemeral=True)
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            await ctx.respond("an error occured", ephemeral=True)
