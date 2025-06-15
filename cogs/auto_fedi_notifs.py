@@ -14,7 +14,12 @@ async def get_latest_posts():
                                       json={"limit": 10, "userId": FEDI_USER_ID}) as resp:
             js = await resp.json()
 
-            return [i["id"] for i in js if i["text"] is not None or i["cw"] is not None]
+            posts = js
+            posts = [i for i in posts if i['cw'] is None or len(i['cw']) == 0]         # posts without cw
+            posts = [i for i in posts if i['visibility'] == "public"]                  # public posts only
+            posts = [i for i in posts if i['reply'] is None]                           # no replies
+
+            return [i["id"] for i in posts]
 
     return []
 
