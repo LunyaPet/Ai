@@ -17,7 +17,7 @@ async def get_latest_posts():
             posts = js
             posts = [i for i in posts if i['cw'] is None or len(i['cw']) == 0]         # posts without cw
             posts = [i for i in posts if i['visibility'] == "public"]                  # public posts only
-            posts = [i for i in posts if i['reply'] is None]                           # no replies
+            posts = [i for i in posts if 'reply' not in i or i['reply'] is None]      # no replies
 
             return [i["id"] for i in posts]
 
