@@ -71,6 +71,9 @@ def handle_awawa(message: discord.Message):
 
     resp = "awa" + "wa" * count_awawa
 
+    if count_awawa == 0:
+        return ""
+
     return resp.strip()
 
 
