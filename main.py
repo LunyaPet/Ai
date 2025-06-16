@@ -16,7 +16,7 @@ from cogs.general_cleaner import GeneralCleaner
 from cogs.init_cache import InitCache
 from cogs.media_threads import MediaThreads
 from cogs.message_reporting import MessageReporting
-from cogs.nsfw_verification import NsfwRolePicker, NsfwVerification
+from cogs.nsfw_verification import NsfwVerification
 from cogs.statistics import ServerStatistics
 from cogs.user_commands import UserCommands
 from constants import DISCORD_TOKEN, SENTRY_DSN
@@ -32,6 +32,9 @@ bot = discord.Bot(intents=discord.Intents.all())
 
 @bot.event
 async def on_ready():
+    if not bot.user:
+        return
+
     logging.info(f"{bot.user.display_name} has connected to Discord!")
 
 @bot.event

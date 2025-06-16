@@ -62,6 +62,17 @@ def handle_gex(message: discord.Message):
     resp += "sesbian lex " * count_sesbian_lex
     return resp.strip()
 
+def handle_awawa(message: discord.Message):
+    count_awawa = 0
+
+    for i in message.content.split(" "):
+        if i.startswith("awa"):
+            count_awawa += (len(i) - 3) // 2
+
+    resp = "awa" + "wa" * count_awawa
+
+    return resp.strip()
+
 
 class FunnyAutoResponse(discord.Cog):
     def __init__(self, bot: discord.Bot):
@@ -70,6 +81,9 @@ class FunnyAutoResponse(discord.Cog):
     @discord.Cog.listener()
     async def on_message(self, message: discord.Message):
         try:
+            if message.guild is None:
+                return
+
             if message.author.bot:
                 return
 
@@ -83,7 +97,8 @@ class FunnyAutoResponse(discord.Cog):
                 handle_meow(message),
                 handle_colon_three(message),
                 handle_owo(message),
-                handle_gex(message)
+                handle_gex(message),
+                handle_awawa(message)
             ])
 
             message_reply = message_reply.replace("  ", " ")
